@@ -58,7 +58,7 @@ namespace {
             createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
             createInfo.enabledExtensionNames = enabledExtensions.data();
 
-            createInfo.applicationInfo = {"BasicXrApp", 1, "", 1, XR_CURRENT_API_VERSION};
+            createInfo.applicationInfo = {"BetterVR OpenXR Client", 1, "", 1, XR_CURRENT_API_VERSION};
             strcpy_s(createInfo.applicationInfo.applicationName, m_applicationName.c_str());
             CHECK_XRCMD(xrCreateInstance(&createInfo, m_instance.Put()));
 
@@ -87,6 +87,8 @@ namespace {
 
             // D3D11 extension is required for this sample, so check if it's supported.
             CHECK(EnableExtensionIfSupported(XR_KHR_D3D11_ENABLE_EXTENSION_NAME));
+
+            CHECK(EnableExtensionIfSupported(XR_KHR_WIN32_CONVERT_PERFORMANCE_COUNTER_TIME_EXTENSION_NAME));
 
 #if UWP
             // Require XR_EXT_win32_appcontainer_compatible extension when building in UWP context.
@@ -651,6 +653,20 @@ namespace {
             frameEndInfo.layerCount = (uint32_t)layers.size();
             frameEndInfo.layers = layers.data();
             CHECK_XRCMD(xrEndFrame(m_session.Get(), &frameEndInfo));
+
+            LARGE_INTEGER timeFrequency;
+            m_extensions.xrConvertTimeToWin32PerformanceCounterKHR(m_instance.Get(), frameState.predictedDisplayTime, &currentFrameTime);
+
+            LONGLONG renderTime = currentFrameTime.QuadPart - previousFrameTime.QuadPart;
+
+            if (debugPrintCounter > 30) {
+                QueryPerformanceFrequency(&timeFrequency);
+                OutputDebugStringA((std::string("Render Time: ") + std::to_string((((double)renderTime * 1000.0f) / (double)timeFrequency.QuadPart)) + "ms\n").c_str());
+                debugPrintCounter = 0;
+            }
+            else debugPrintCounter++;
+
+            previousFrameTime = currentFrameTime;
         }
 
         uint32_t AcquireAndWaitForSwapchainImage(XrSwapchain handle) {
@@ -912,6 +928,10 @@ namespace {
 
         bool m_sessionRunning{false};
         XrSessionState m_sessionState{XR_SESSION_STATE_UNKNOWN};
+
+        LARGE_INTEGER previousFrameTime;
+        LARGE_INTEGER currentFrameTime;
+        uint32_t debugPrintCounter = 0;
     };
 } // namespace
 

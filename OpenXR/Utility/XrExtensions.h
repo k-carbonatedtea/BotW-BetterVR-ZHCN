@@ -4,7 +4,9 @@
 #pragma once
 
 #ifdef XR_USE_PLATFORM_WIN32
-#define FOR_EACH_WIN32_EXTENSION_FUNCTION(_) _(xrConvertWin32PerformanceCounterToTimeKHR)
+#define FOR_EACH_WIN32_EXTENSION_FUNCTION(_)            \
+_(xrConvertWin32PerformanceCounterToTimeKHR)            \
+_(xrConvertTimeToWin32PerformanceCounterKHR)
 #else
 #define FOR_EACH_WIN32_EXTENSION_FUNCTION(_)
 #endif

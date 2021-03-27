@@ -41,7 +41,13 @@
     <ClInclude Include="Utility\XrString.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Graphic Packs\BreathOfTheWild_BetterVR\patch_BetterVR.asm" />
+    <None Include="..\Graphic Packs\BreathOfTheWild_BetterVR\patch_CalcRot.asm" />
+    <None Include="..\Graphic Packs\BreathOfTheWild_BetterVR\patch_CalcRotWrapper.asm" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\Graphic Packs\BreathOfTheWild_BetterVR\rules.txt" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

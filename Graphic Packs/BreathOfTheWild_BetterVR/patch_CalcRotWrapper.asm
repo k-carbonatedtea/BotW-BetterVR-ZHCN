@@ -150,4 +150,4 @@ lfs f12, storeF12@l(r10)
 lis r10, storeF13@ha
 lfs f13, storeF13@l(r10)
 
-blr
+b finishStoreResults

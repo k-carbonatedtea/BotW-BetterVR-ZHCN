@@ -8,6 +8,9 @@
     <Filter Include="Utility Files">
       <UniqueIdentifier>{53f1dfb2-c249-4fd8-8fc3-dbee81b47cf5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Graphic Packs">
+      <UniqueIdentifier>{6496941e-fb87-432b-8473-231c3f9f4ab6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -63,5 +66,20 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="$(OpenXRLoaderBinaryRoot)\bin\openxr_loader.dll" />
+    <None Include="..\Graphic Packs\BreathOfTheWild_BetterVR\patch_BetterVR.asm">
+      <Filter>Graphic Packs</Filter>
+    </None>
+    <None Include="..\Graphic Packs\BreathOfTheWild_BetterVR\patch_CalcRot.asm">
+      <Filter>Graphic Packs</Filter>
+    </None>
+    <None Include="..\Graphic Packs\BreathOfTheWild_BetterVR\patch_CalcRotWrapper.asm">
+      <Filter>Graphic Packs</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\Graphic Packs\BreathOfTheWild_BetterVR\rules.txt">
+      <Filter>Graphic Packs</Filter>
+    </Text>
   </ItemGroup>
 </Project>

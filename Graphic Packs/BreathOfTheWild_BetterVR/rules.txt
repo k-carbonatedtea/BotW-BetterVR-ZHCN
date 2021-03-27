@@ -1,0 +1,81 @@
+[Definition]
+titleIds = 00050000101C9300,00050000101C9400,00050000101C9500
+name = Better VR
+path = "The Legend of Zelda: Breath of the Wild/Better VR"
+description = Woah, put on those goggles!
+version = 7
+
+[Default]
+$mode:int = 0
+$FOV = 0.872665
+$cameraDistance = 0.1
+$linkOpacity = 1.0
+
+# Mode selector
+
+[Preset]
+name = Third-Person (Default)
+category = Camera Mode
+default = 1
+
+[Preset]
+name = First-Person
+category = Camera Mode
+$mode:int = 1
+$linkOpacity = 0.0
+
+# Third Person - Camera Distance
+
+[Preset]
+name = Low
+category = Camera Distance
+condition = $mode == 0
+$cameraDistance = 0.4
+
+[Preset]
+name = Normal (Default)
+category = Camera Distance
+condition = $mode == 0
+default = 1
+$cameraDistance = 0.5
+
+[Preset]
+name = High
+category = Camera Distance
+condition = $mode == 0
+$cameraDistance = 0.675
+
+[Preset]
+name = Very High
+category = Camera Distance
+condition = $mode == 0
+$cameraDistance = 0.8
+
+[Preset]
+name = Extreme
+category = Camera Distance
+condition = $mode == 0
+$cameraDistance = 0.9
+
+# Field Of View
+
+[Preset]
+name = Low
+category = Field Of View
+$FOV = 0.95
+
+[Preset]
+name = Normal (Default)
+category = Field Of View
+default = 1
+$FOV = 0.872665
+
+[Preset]
+name = High
+category = Field Of View
+$FOV = 0.8
+
+[Preset]
+name = Extreme
+category = Field Of View
+$FOV = 0.7

@@ -238,7 +238,7 @@ namespace {
             m_deviceContext->OMSetRenderTargets((UINT)std::size(renderTargets), renderTargets, depthStencilView.get());
 
             std::chrono::milliseconds currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-            if (currTime.count() - m_time_since_start.count() > (1000 * 5) && *getCemuHWND() != NULL) {
+            if (currTime.count() - m_time_since_start.count() > (1000 * 5) && *getCemuHWND() != NULL && getHookMode() == HOOK_MODE::GFX_PACK_ENABLED || getHookMode() == HOOK_MODE::BOTH_ENABLED_PRECALC || getHookMode() == HOOK_MODE::BOTH_ENABLED_GFX_CALC) {
                 if (m_setup_not_done) {
                     m_setup_not_done = false;
 

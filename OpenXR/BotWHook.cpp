@@ -31,17 +31,22 @@ float reverseFloatEndianess(float inFloat) {
 #define APP_CALC_CONVERT 1          // Use this with the PrecalcVR graphic pack. Used as an intermediary for converting the library-dependent code into native graphic pack code.
 #define APP_CALC_LIBRARY 2          // Use this with the PrecalcVR graphic pack. Used for easily testing code using libraries.
 
-#define CALC_MODE GFX_PACK_PASSTHROUGH
+#define CALC_MODE APP_CALC_LIBRARY
 
 
-#if CALC_MODE == GFX_PACK_PASSTHROUGH
-struct inputData {
-    byte status;
+struct inputDataBuffer {
+    HOOK_MODE status;
     XrQuaternionf headsetQuaternion;
     XrVector3f headsetPosition;
 };
 
-void reverseInputEndianess(inputData* data) {
+struct copyDataBuffer {
+    XrVector3f pos;
+    XrVector3f target;
+    XrVector3f rot;
+};
+
+void reverseInputBufferEndianess(inputDataBuffer* data) {
     data->headsetQuaternion.x = reverseFloatEndianess(data->headsetQuaternion.x);
     data->headsetQuaternion.y = reverseFloatEndianess(data->headsetQuaternion.y);
     data->headsetQuaternion.z = reverseFloatEndianess(data->headsetQuaternion.z);
@@ -51,24 +56,7 @@ void reverseInputEndianess(inputData* data) {
     data->headsetPosition.z = reverseFloatEndianess(data->headsetPosition.z);
 }
 
-inputData cameraData;
-#elif CALC_MODE == APP_CALC_CONVERT || CALC_MODE == APP_CALC_LIBRARY
-
-struct Vec3 {
-    float x;
-    float y;
-    float z;
-};
-
-struct inputData {
-    byte status;
-    Vec3 pos;
-    Vec3 target;
-    Vec3 rot;
-    float fov;
-};
-
-void reverseInputEndianess(inputData* data) {
+void reverseCopyBufferEndianess(copyDataBuffer* data) {
     data->pos.x = reverseFloatEndianess(data->pos.x);
     data->pos.y = reverseFloatEndianess(data->pos.y);
     data->pos.z = reverseFloatEndianess(data->pos.z);
@@ -78,11 +66,11 @@ void reverseInputEndianess(inputData* data) {
     data->rot.x = reverseFloatEndianess(data->rot.x);
     data->rot.y = reverseFloatEndianess(data->rot.y);
     data->rot.z = reverseFloatEndianess(data->rot.z);
-    data->fov = reverseFloatEndianess(data->fov);
 }
 
-inputData cameraData;
-#endif
+HOOK_MODE hookStatus;
+inputDataBuffer inputCamera;
+copyDataBuffer copyCamera;
 
 BOOL CALLBACK findCemuWindowCallback(HWND hWnd, LPARAM lparam) {
     UNUSED(lparam);
@@ -124,6 +112,8 @@ BOOL CALLBACK findCemuWindowCallback(HWND hWnd, LPARAM lparam) {
         logFile.close();
 
         std::string line;
+        bool runningTitle = false;
+
         while (std::getline(logFileStream, line)) {
             auto baseMemoryPos = line.find("Init Wii U memory space (base: ");
             auto vrMemoryPos = line.find("Applying patch group 'BotW_BetterVR_V208' (Codecave: ");
@@ -133,6 +123,13 @@ BOOL CALLBACK findCemuWindowCallback(HWND hWnd, LPARAM lparam) {
             else if (vrMemoryPos != std::string::npos) {
                 vrAddress = std::stoull(line.substr(vrMemoryPos + sizeof("Applying patch group 'BotW_BetterVR_V208' (Codecave: ") - 1), nullptr, 16);
             }
+            else if (line.find("Applying patch group 'BotW_BetterVR_V208' (Codecave: ") != std::string::npos) {
+                runningTitle = true;
+            }
+        }
+
+        if (runningTitle && baseAddress != NULL && vrAddress == NULL) {
+            MessageBoxA(NULL, "BetterVR graphic pack isn't enabled!", "You need to have the BetterVR graphic pack enabled to enable the VR from working.", MB_OK | MB_ICONWARNING);
         }
     }
     return TRUE;
@@ -171,13 +168,10 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
 
         SIZE_T writtenSize = 0;
 #if CALC_MODE == GFX_PACK_PASSTHROUGH
-        ReadProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress), (void*)&cameraData, sizeof(cameraData), &writtenSize);
-#elif CALC_MODE == APP_CALC_CONVERT || CALC_MODE == APP_CALC_LIBRARY
-        ReadProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress + sizeof(inputData)), (void*)&cameraData, sizeof(cameraData), &writtenSize);
-#endif
-        reverseInputEndianess(&cameraData);
-        
-        if (cameraData.status == 0) {
+        ReadProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress), (void*)&hookStatus, sizeof(HOOK_MODE), &writtenSize);
+        inputCamera = {};
+
+        if (hookStatus == DISABLED) {
             cemuHWND = NULL;
             cemuProcessID = NULL;
             cemuHandle = NULL;
@@ -187,242 +181,260 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
             retryFindingCemu = 0;
             return;
         }
-#if CALC_MODE == APP_CALC_CONVERT || CALC_MODE == APP_CALC_LIBRARY
-        else if (cameraData.pos.x == 0.0f || cameraData.pos.y == 0.0f || cameraData.pos.z == 0.0f) {
-            cameraData.status = 2;
-            reverseInputEndianess(&cameraData);
-            WriteProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress), (const void*)&cameraData, sizeof(cameraData), &writtenSize);
+        else if (hookStatus == GFX_PACK_ENABLED || hookStatus == BOTH_ENABLED_GFX_CALC) {
+            inputCamera.status = BOTH_ENABLED_GFX_CALC;
+            inputCamera.headsetQuaternion.x = middleScreen.orientation.x;
+            inputCamera.headsetQuaternion.y = middleScreen.orientation.y;
+            inputCamera.headsetQuaternion.z = middleScreen.orientation.z;
+            inputCamera.headsetQuaternion.w = middleScreen.orientation.w;
+            inputCamera.headsetPosition.x = middleScreen.orientation.x;
+            inputCamera.headsetPosition.y = middleScreen.orientation.y;
+            inputCamera.headsetPosition.z = middleScreen.orientation.z;
+        }
+
+        reverseInputBufferEndianess(&inputCamera);
+        WriteProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress), (const void*)&cameraData, sizeof(inputDataBuffer), &writtenSize);
+#elif CALC_MODE == APP_CALC_CONVERT || CALC_MODE == APP_CALC_LIBRARY
+        ReadProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress), (void*)&hookStatus, sizeof(HOOK_MODE), &writtenSize);
+
+        ReadProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress + sizeof(inputDataBuffer)), (void*)&copyCamera, sizeof(copyDataBuffer), &writtenSize);
+        reverseCopyBufferEndianess(&copyCamera);
+
+        if (hookStatus == HOOK_MODE::DISABLED) {
+            cemuHWND = NULL;
+            cemuProcessID = NULL;
+            cemuHandle = NULL;
+            cemuPath = "";
+            baseAddress = NULL;
+            vrAddress = NULL;
+            retryFindingCemu = 0;
             return;
         }
-#endif
-        else if (cameraData.status == 1) {
-            cameraData.status = 2;
+        else if (copyCamera.pos.x == 0.0f || copyCamera.pos.y == 0.0f || copyCamera.pos.z == 0.0f) {
+            hookStatus = HOOK_MODE::BOTH_ENABLED_PRECALC;
+            reverseCopyBufferEndianess(&copyCamera);
+            WriteProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress + sizeof(inputDataBuffer) + sizeof(copyDataBuffer) - sizeof(XrVector3f)), (const void*)&copyCamera, sizeof(copyDataBuffer), &writtenSize);
         }
+        else if (hookStatus == HOOK_MODE::GFX_PACK_ENABLED || hookStatus == HOOK_MODE::BOTH_ENABLED_PRECALC) {
+            hookStatus = HOOK_MODE::BOTH_ENABLED_PRECALC;
+#if CALC_MODE == APP_CALC_CONVERT
+            // Define the "global" variables
+            float oldTargetX = copyCamera.target.x;
+            float oldTargetY = copyCamera.target.y;
+            float oldTargetZ = copyCamera.target.z;
+            float oldPosX = copyCamera.pos.x;
+            float oldPosY = copyCamera.pos.y;
+            float oldPosZ = copyCamera.pos.z;
 
-#if CALC_MODE == GFX_PACK_PASSTHROUGH
-        cameraData.headsetQuaternion.x = middleScreen.orientation.x;
-        cameraData.headsetQuaternion.y = middleScreen.orientation.y;
-        cameraData.headsetQuaternion.z = middleScreen.orientation.z;
-        cameraData.headsetQuaternion.w = middleScreen.orientation.w;
-        cameraData.headsetPosition.x = middleScreen.orientation.x;
-        cameraData.headsetPosition.y = middleScreen.orientation.y;
-        cameraData.headsetPosition.z = middleScreen.orientation.z;
-#elif CALC_MODE == APP_CALC_CONVERT
-        // Define the "global" variables
-        float oldTargetX = cameraData.target.x;
-        float oldTargetY = cameraData.target.y;
-        float oldTargetZ = cameraData.target.z;
-        float oldPosX = cameraData.pos.x;
-        float oldPosY = cameraData.pos.y;
-        float oldPosZ = cameraData.pos.z;
+            float hmdQuatX = middleScreen.orientation.x;
+            float hmdQuatY = middleScreen.orientation.y;
+            float hmdQuatZ = middleScreen.orientation.z;
+            float hmdQuatW = middleScreen.orientation.w;
+            float hmdPosX = middleScreen.position.x;
+            float hmdPosY = middleScreen.position.y;
+            float hmdPosZ = middleScreen.position.z;
 
-        float hmdQuatX = middleScreen.orientation.x;
-        float hmdQuatY = middleScreen.orientation.y;
-        float hmdQuatZ = middleScreen.orientation.z;
-        float hmdQuatW = middleScreen.orientation.w;
-        float hmdPosX = middleScreen.position.x;
-        float hmdPosY = middleScreen.position.y;
-        float hmdPosZ = middleScreen.position.z;
+            float newTargetX = 0.0f;
+            float newTargetY = 0.0f;
+            float newTargetZ = 0.0f;
+            float newPosX = 0.0f;
+            float newPosY = 0.0f;
+            float newPosZ = 0.0f;
+            float newRotX = 0.0f;
+            float newRotY = 0.0f;
+            float newRotZ = 0.0f;
 
-        float newTargetX = 0.0f;
-        float newTargetY = 0.0f;
-        float newTargetZ = 0.0f;
-        float newPosX = 0.0f;
-        float newPosY = 0.0f;
-        float newPosZ = 0.0f;
-        float newRotX = 0.0f;
-        float newRotY = 0.0f;
-        float newRotZ = 0.0f;
+            const float lookUpX = 0.0f;
+            const float lookUpY = 1.0f;
+            const float lookUpZ = 0.0f;
 
-        const float lookUpX = 0.0f;
-        const float lookUpY = 1.0f;
-        const float lookUpZ = 0.0f;
+            // Calculate direction vector by subtraction
+            float directionX = targetX - posX;
+            float directionY = targetY - posY;
+            float directionZ = targetZ - posZ;
 
-        // Calculate direction vector by subtraction
-        float directionX = targetX - posX;
-        float directionY = targetY - posY;
-        float directionZ = targetZ - posZ;
+            // Normalize forward/direction vector
+            float directionLength = sqrtf(directionX * directionX + directionY * directionY + directionZ * directionZ);
+            directionX = directionX / directionLength;
+            directionY = directionY / directionLength;
+            directionZ = directionZ / directionLength;
 
-        // Normalize forward/direction vector
-        float directionLength = sqrtf(directionX * directionX + directionY * directionY + directionZ * directionZ);
-        directionX = directionX / directionLength;
-        directionY = directionY / directionLength;
-        directionZ = directionZ / directionLength;
+            float viewMatrix[3][3];
 
-        float viewMatrix[3][3];
+            viewMatrix[2][0] = -directionX;
+            viewMatrix[2][1] = -directionY;
+            viewMatrix[2][2] = -directionZ;
 
-        viewMatrix[2][0] = -directionX;
-        viewMatrix[2][1] = -directionY;
-        viewMatrix[2][2] = -directionZ;
+            // Cross product to get right row
+            float rightX = lookUpY * viewMatrix[2][2] - viewMatrix[2][1] * lookUpZ;
+            float rightY = lookUpZ * viewMatrix[2][0] - viewMatrix[2][2] * lookUpX;
+            float rightZ = lookUpX * viewMatrix[2][1] - viewMatrix[2][0] * lookUpY;
 
-        // Cross product to get right row
-        float rightX = lookUpY * viewMatrix[2][2] - viewMatrix[2][1] * lookUpZ;
-        float rightY = lookUpZ * viewMatrix[2][0] - viewMatrix[2][2] * lookUpX;
-        float rightZ = lookUpX * viewMatrix[2][1] - viewMatrix[2][0] * lookUpY;
+            float dotRow = rightX * rightX + rightY * rightY + rightZ * rightZ;
+            float multiplier = 1.0f / sqrtf(dotRow < 0.00000001f ? 0.00000001f : dotRow);
+            viewMatrix[0][0] = rightX * multiplier;
+            viewMatrix[0][1] = rightY * multiplier;
+            viewMatrix[0][2] = rightZ * multiplier;
 
-        float dotRow = rightX * rightX + rightY * rightY + rightZ * rightZ;
-        float multiplier = 1.0f / sqrtf(dotRow < 0.00000001f ? 0.00000001f : dotRow);
-        viewMatrix[0][0] = rightX * multiplier;
-        viewMatrix[0][1] = rightY * multiplier;
-        viewMatrix[0][2] = rightZ * multiplier;
+            // Cross product to get upwards row
+            viewMatrix[1][0] = viewMatrix[2][1] * viewMatrix[0][2] - viewMatrix[0][1] * viewMatrix[2][2];
+            viewMatrix[1][1] = viewMatrix[2][2] * viewMatrix[0][0] - viewMatrix[0][2] * viewMatrix[2][0];
+            viewMatrix[1][2] = viewMatrix[2][0] * viewMatrix[0][1] - viewMatrix[0][0] * viewMatrix[2][1];
 
-        // Cross product to get upwards row
-        viewMatrix[1][0] = viewMatrix[2][1] * viewMatrix[0][2] - viewMatrix[0][1] * viewMatrix[2][2];
-        viewMatrix[1][1] = viewMatrix[2][2] * viewMatrix[0][0] - viewMatrix[0][2] * viewMatrix[2][0];
-        viewMatrix[1][2] = viewMatrix[2][0] * viewMatrix[0][1] - viewMatrix[0][0] * viewMatrix[2][1];
+            // Convert rotation matrix to quaternion
+            float fourXSquaredMinus1 = viewMatrix[0][0] - viewMatrix[1][1] - viewMatrix[2][2];
+            float fourYSquaredMinus1 = viewMatrix[1][1] - viewMatrix[0][0] - viewMatrix[2][2];
+            float fourZSquaredMinus1 = viewMatrix[2][2] - viewMatrix[0][0] - viewMatrix[1][1];
+            float fourWSquaredMinus1 = viewMatrix[0][0] + viewMatrix[1][1] + viewMatrix[2][2];
 
-        // Convert rotation matrix to quaternion
-        float fourXSquaredMinus1 = viewMatrix[0][0] - viewMatrix[1][1] - viewMatrix[2][2];
-        float fourYSquaredMinus1 = viewMatrix[1][1] - viewMatrix[0][0] - viewMatrix[2][2];
-        float fourZSquaredMinus1 = viewMatrix[2][2] - viewMatrix[0][0] - viewMatrix[1][1];
-        float fourWSquaredMinus1 = viewMatrix[0][0] + viewMatrix[1][1] + viewMatrix[2][2];
+            int biggestIndex = 0;
+            float fourBiggestSquaredMinus1 = fourWSquaredMinus1;
+            if (fourXSquaredMinus1 > fourBiggestSquaredMinus1) {
+                fourBiggestSquaredMinus1 = fourXSquaredMinus1;
+                biggestIndex = 1;
+            }
+            if (fourYSquaredMinus1 > fourBiggestSquaredMinus1) {
+                fourBiggestSquaredMinus1 = fourYSquaredMinus1;
+                biggestIndex = 2;
+            }
+            if (fourZSquaredMinus1 > fourBiggestSquaredMinus1) {
+                fourBiggestSquaredMinus1 = fourZSquaredMinus1;
+                biggestIndex = 3;
+            }
 
-        int biggestIndex = 0;
-        float fourBiggestSquaredMinus1 = fourWSquaredMinus1;
-        if (fourXSquaredMinus1 > fourBiggestSquaredMinus1) {
-            fourBiggestSquaredMinus1 = fourXSquaredMinus1;
-            biggestIndex = 1;
-        }
-        if (fourYSquaredMinus1 > fourBiggestSquaredMinus1) {
-            fourBiggestSquaredMinus1 = fourYSquaredMinus1;
-            biggestIndex = 2;
-        }
-        if (fourZSquaredMinus1 > fourBiggestSquaredMinus1) {
-            fourBiggestSquaredMinus1 = fourZSquaredMinus1;
-            biggestIndex = 3;
-        }
+            float biggestValue = sqrtf(fourBiggestSquaredMinus1 + 1.0f) * 0.5f;
+            float mult = 0.25f / biggestValue;
 
-        float biggestValue = sqrtf(fourBiggestSquaredMinus1 + 1.0f) * 0.5f;
-        float mult = 0.25f / biggestValue;
+            float q_w = 0.0f;
+            float q_x = 0.0f;
+            float q_y = 0.0f;
+            float q_z = 0.0f;
 
-        float q_w = 0.0f;
-        float q_x = 0.0f;
-        float q_y = 0.0f;
-        float q_z = 0.0f;
+            if (biggestIndex == 0) {
+                q_w = biggestValue;
+                q_x = (viewMatrix[1][2] - viewMatrix[2][1]) * mult;
+                q_y = (viewMatrix[2][0] - viewMatrix[0][2]) * mult;
+                q_z = (viewMatrix[0][1] - viewMatrix[1][0]) * mult;
+            }
+            else if (biggestIndex == 1) {
+                q_w = (viewMatrix[1][2] - viewMatrix[2][1]) * mult;
+                q_x = biggestValue;
+                q_y = (viewMatrix[0][1] + viewMatrix[1][0]) * mult;
+                q_z = (viewMatrix[2][0] + viewMatrix[0][2]) * mult;
+            }
+            else if (biggestIndex == 2) {
+                q_w = (viewMatrix[2][0] - viewMatrix[0][2]) * mult;
+                q_x = (viewMatrix[0][1] + viewMatrix[1][0]) * mult;
+                q_y = biggestValue;
+                q_z = (viewMatrix[1][2] + viewMatrix[2][1]) * mult;
+            }
+            else if (biggestIndex == 3) {
+                q_w = (viewMatrix[0][1] - viewMatrix[1][0]) * mult;
+                q_x = (viewMatrix[2][0] + viewMatrix[0][2]) * mult;
+                q_y = (viewMatrix[1][2] + viewMatrix[2][1]) * mult;
+                q_z = biggestValue;
+            }
 
-        if (biggestIndex == 0) {
-            q_w = biggestValue;
-            q_x = (viewMatrix[1][2] - viewMatrix[2][1]) * mult;
-            q_y = (viewMatrix[2][0] - viewMatrix[0][2]) * mult;
-            q_z = (viewMatrix[0][1] - viewMatrix[1][0]) * mult;
-        }
-        else if (biggestIndex == 1) {
-            q_w = (viewMatrix[1][2] - viewMatrix[2][1]) * mult;
-            q_x = biggestValue;
-            q_y = (viewMatrix[0][1] + viewMatrix[1][0]) * mult;
-            q_z = (viewMatrix[2][0] + viewMatrix[0][2]) * mult;
-        }
-        else if (biggestIndex == 2) {
-            q_w = (viewMatrix[2][0] - viewMatrix[0][2]) * mult;
-            q_x = (viewMatrix[0][1] + viewMatrix[1][0]) * mult;
-            q_y = biggestValue;
-            q_z = (viewMatrix[1][2] + viewMatrix[2][1]) * mult;
-        }
-        else if (biggestIndex == 3) {
-            q_w = (viewMatrix[0][1] - viewMatrix[1][0]) * mult;
-            q_x = (viewMatrix[2][0] + viewMatrix[0][2]) * mult;
-            q_y = (viewMatrix[1][2] + viewMatrix[2][1]) * mult;
-            q_z = biggestValue;
-        }
+            // Multiply the game's rotation quaternion with the headset's rotation quaternion
+            float new_q_x = q_x * hmdQuatW + q_y * hmdQuatZ - q_z * hmdQuatY + q_w * hmdQuatX;
+            float new_q_y = -q_x * hmdQuatZ + q_y * hmdQuatW + q_z * hmdQuatX + q_w * hmdQuatY;
+            float new_q_z = q_x * hmdQuatY - q_y * hmdQuatX + q_z * hmdQuatW + q_w * hmdQuatZ;
+            float new_q_w = -q_x * hmdQuatX - q_y * hmdQuatY - q_z * hmdQuatZ + q_w * hmdQuatW;
 
-        // Multiply the game's rotation quaternion with the headset's rotation quaternion
-        float new_q_x =  q_x * hmdQuatW + q_y * hmdQuatZ - q_z * hmdQuatY + q_w * hmdQuatX;
-        float new_q_y = -q_x * hmdQuatZ + q_y * hmdQuatW + q_z * hmdQuatX + q_w * hmdQuatY;
-        float new_q_z =  q_x * hmdQuatY - q_y * hmdQuatX + q_z * hmdQuatW + q_w * hmdQuatZ;
-        float new_q_w = -q_x * hmdQuatX - q_y * hmdQuatY - q_z * hmdQuatZ + q_w * hmdQuatW;
+            // Convert new quaterion into a 3x3 rotation matrix
+            float qxx = new_q_x * new_q_x;
+            float qyy = new_q_y * new_q_y;
+            float qzz = new_q_z * new_q_z;
+            float qxz = new_q_x * new_q_z;
+            float qxy = new_q_x * new_q_y;
+            float qyz = new_q_y * new_q_z;
+            float qwx = new_q_w * new_q_x;
+            float qwy = new_q_w * new_q_y;
+            float qwz = new_q_w * new_q_z;
 
-        // Convert new quaterion into a 3x3 rotation matrix
-        float qxx = new_q_x * new_q_x;
-        float qyy = new_q_y * new_q_y;
-        float qzz = new_q_z * new_q_z;
-        float qxz = new_q_x * new_q_z;
-        float qxy = new_q_x * new_q_y;
-        float qyz = new_q_y * new_q_z;
-        float qwx = new_q_w * new_q_x;
-        float qwy = new_q_w * new_q_y;
-        float qwz = new_q_w * new_q_z;
+            float newViewMatrix[3][3];
+            newViewMatrix[0][0] = 1.0f - 2.0f * (qyy + qzz);
+            newViewMatrix[0][1] = 2.0f * (qxy + qwz);
+            newViewMatrix[0][2] = 2.0f * (qxz - qwy);
 
-        float newViewMatrix[3][3];
-        newViewMatrix[0][0] = 1.0f - 2.0f * (qyy + qzz);
-        newViewMatrix[0][1] = 2.0f * (qxy + qwz);
-        newViewMatrix[0][2] = 2.0f * (qxz - qwy);
+            newViewMatrix[1][0] = 2.0f * (qxy - qwz);
+            newViewMatrix[1][1] = 1.0f - 2.0f * (qxx + qzz);
+            newViewMatrix[1][2] = 2.0f * (qyz + qwx);
 
-        newViewMatrix[1][0] = 2.0f * (qxy - qwz);
-        newViewMatrix[1][1] = 1.0f - 2.0f * (qxx + qzz);
-        newViewMatrix[1][2] = 2.0f * (qyz + qwx);
+            newViewMatrix[2][0] = 2.0f * (qxz + qwy);
+            newViewMatrix[2][1] = 2.0f * (qyz - qwx);
+            newViewMatrix[2][2] = 1.0f - 2.0f * (qxx + qyy);
 
-        newViewMatrix[2][0] = 2.0f * (qxz + qwy);
-        newViewMatrix[2][1] = 2.0f * (qyz - qwx);
-        newViewMatrix[2][2] = 1.0f - 2.0f * (qxx + qyy);
+            // Change camera variables
+            float distance = sqrtf(((targetX - posX) * (targetX - posX)) + ((targetY - posY) * (targetY - posY)) + ((targetZ - posZ) * (targetZ - posZ)));
+            float targetVecX = (newViewMatrix[2][0] * -1.0f) * distance;
+            float targetVecY = (newViewMatrix[2][1] * -1.0f) * distance;
+            float targetVecZ = (newViewMatrix[2][2] * -1.0f) * distance;
 
-        // Change camera variables
-        float distance = sqrtf(((targetX - posX) * (targetX - posX)) + ((targetY - posY) * (targetY - posY)) + ((targetZ - posZ) * (targetZ - posZ)));
-        float targetVecX = (newViewMatrix[2][0] * -1.0f) * distance;
-        float targetVecY = (newViewMatrix[2][1] * -1.0f) * distance;
-        float targetVecZ = (newViewMatrix[2][2] * -1.0f) * distance;
+            newTargetX = posX + targetVecX;
+            newTargetY = posY + targetVecY;
+            newTargetZ = posZ + targetVecZ;
 
-        newTargetX = posX + targetVecX;
-        newTargetY = posY + targetVecY;
-        newTargetZ = posZ + targetVecZ;
+            newPosX = posX - (targetVecX * 0.0f);
+            newPosY = posY - (targetVecY * 0.0f);
+            newPosZ = posZ - (targetVecZ * 0.0f);
 
-        newPosX = posX - (targetVecX * 0.0f);
-        newPosY = posY - (targetVecY * 0.0f);
-        newPosZ = posZ - (targetVecZ * 0.0f);
+            newRotX = newViewMatrix[1][0];
+            newRotY = newViewMatrix[1][1];
+            newRotZ = newViewMatrix[1][2];
 
-        newRotX = newViewMatrix[1][0];
-        newRotY = newViewMatrix[1][1];
-        newRotZ = newViewMatrix[1][2];
+            // Set global variables
+            copyCamera.target.x = newTargetX;
+            copyCamera.target.y = newTargetY;
+            copyCamera.target.z = newTargetZ;
 
-        // Set global variables
-        cameraData.target.x = newTargetX;
-        cameraData.target.y = newTargetY;
-        cameraData.target.z = newTargetZ;
+            copyCamera.pos.x = newPosX;
+            copyCamera.pos.y = newPosY;
+            copyCamera.pos.z = newPosZ;
 
-        cameraData.pos.x = newPosX;
-        cameraData.pos.y = newPosY;
-        cameraData.pos.z = newPosZ;
-
-        cameraData.rot.x = newRotX;
-        cameraData.rot.y = newRotY;
-        cameraData.rot.z = newRotZ;
+            copyCamera.rot.x = newRotX;
+            copyCamera.rot.y = newRotY;
+            copyCamera.rot.z = newRotZ;
 #elif CALC_MODE == APP_CALC_LIBRARY
-        Eigen::Vector3f forwardVector = Eigen::Vector3f(cameraData.target.x, cameraData.target.y, cameraData.target.z) - Eigen::Vector3f(cameraData.pos.x, cameraData.pos.y, cameraData.pos.z);
-        forwardVector.normalize();
-        
-        glm::vec3 direction(forwardVector.x(), forwardVector.y(), forwardVector.z());
-        glm::fquat tempGameQuat = glm::quatLookAtRH(direction, glm::vec3(0.0, 1.0, 0.0));
-        Eigen::Quaternionf gameQuat = Eigen::Quaternionf(tempGameQuat.w, tempGameQuat.x, tempGameQuat.y, tempGameQuat.z);
-        Eigen::Quaternionf hmdQuat = Eigen::Quaternionf(middleScreen.orientation.w, middleScreen.orientation.x, middleScreen.orientation.y, middleScreen.orientation.z);
-        Eigen::Quaternionf differenceQuat = Eigen::Quaternionf(middleScreen.orientation.w, middleScreen.orientation.x, middleScreen.orientation.y, middleScreen.orientation.z);
-        
-        gameQuat = gameQuat * hmdQuat;
-        
-        Eigen::Matrix3f rotMatrix = gameQuat.toRotationMatrix();
-        
-        Eigen::Vector3f targetVec = rotMatrix * Eigen::Vector3f(0.0, 0.0, -1.0);
-        float distance = (float)std::hypot(cameraData.target.x - cameraData.pos.x, cameraData.target.y - cameraData.pos.y, cameraData.target.z - cameraData.pos.z);
-        float targetVecX = targetVec.x() * distance;
-        float targetVecY = targetVec.y() * distance;
-        float targetVecZ = targetVec.z() * distance;
-        
-        cameraData.target.x = cameraData.pos.x + targetVecX;
-        cameraData.target.y = cameraData.pos.y + targetVecY;
-        cameraData.target.z = cameraData.pos.z + targetVecZ;
+            Eigen::Vector3f forwardVector = Eigen::Vector3f(copyCamera.target.x, copyCamera.target.y, copyCamera.target.z) - Eigen::Vector3f(copyCamera.pos.x, copyCamera.pos.y, copyCamera.pos.z);
+            forwardVector.normalize();
 
-        Eigen::Vector3f hmdPos(middleScreen.position.x, middleScreen.position.y, middleScreen.position.z);
-        hmdPos = gameQuat * hmdPos;
-        
-        cameraData.pos.x = cameraData.pos.x + hmdPos.x() * const_HeadPositionalMovementSensitivity;
-        cameraData.pos.y = cameraData.pos.y + hmdPos.y() * const_HeadPositionalMovementSensitivity;
-        cameraData.pos.z = cameraData.pos.z + hmdPos.z() * const_HeadPositionalMovementSensitivity;
-        
-        cameraData.rot.x = rotMatrix.data()[3];
-        cameraData.rot.y = rotMatrix.data()[4];
-        cameraData.rot.z = rotMatrix.data()[5];
+            glm::vec3 direction(forwardVector.x(), forwardVector.y(), forwardVector.z());
+            glm::fquat tempGameQuat = glm::quatLookAtRH(direction, glm::vec3(0.0, 1.0, 0.0));
+            Eigen::Quaternionf gameQuat = Eigen::Quaternionf(tempGameQuat.w, tempGameQuat.x, tempGameQuat.y, tempGameQuat.z);
+            Eigen::Quaternionf hmdQuat = Eigen::Quaternionf(middleScreen.orientation.w, middleScreen.orientation.x, middleScreen.orientation.y, middleScreen.orientation.z);
+            Eigen::Quaternionf differenceQuat = Eigen::Quaternionf(middleScreen.orientation.w, middleScreen.orientation.x, middleScreen.orientation.y, middleScreen.orientation.z);
+
+            gameQuat = gameQuat * hmdQuat;
+
+            Eigen::Matrix3f rotMatrix = gameQuat.toRotationMatrix();
+
+            Eigen::Vector3f targetVec = rotMatrix * Eigen::Vector3f(0.0, 0.0, -1.0);
+            float distance = (float)std::hypot(copyCamera.target.x - copyCamera.pos.x, copyCamera.target.y - copyCamera.pos.y, copyCamera.target.z - copyCamera.pos.z);
+            float targetVecX = targetVec.x() * distance;
+            float targetVecY = targetVec.y() * distance;
+            float targetVecZ = targetVec.z() * distance;
+
+            copyCamera.target.x = copyCamera.pos.x + targetVecX;
+            copyCamera.target.y = copyCamera.pos.y + targetVecY;
+            copyCamera.target.z = copyCamera.pos.z + targetVecZ;
+
+            Eigen::Vector3f hmdPos(middleScreen.position.x, middleScreen.position.y, middleScreen.position.z);
+            hmdPos = gameQuat * hmdPos;
+
+            copyCamera.pos.x = copyCamera.pos.x + hmdPos.x() * const_HeadPositionalMovementSensitivity;
+            copyCamera.pos.y = copyCamera.pos.y + hmdPos.y() * const_HeadPositionalMovementSensitivity;
+            copyCamera.pos.z = copyCamera.pos.z + hmdPos.z() * const_HeadPositionalMovementSensitivity;
+
+            copyCamera.rot.x = rotMatrix.data()[3];
+            copyCamera.rot.y = rotMatrix.data()[4];
+            copyCamera.rot.z = rotMatrix.data()[5];
 #endif
-
-        reverseInputEndianess(&cameraData);
-        WriteProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress), (const void*)&cameraData, sizeof(cameraData), &writtenSize);
+        }
+        reverseCopyBufferEndianess(&copyCamera);
+        WriteProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress), (const void*)&hookStatus, sizeof(HOOK_MODE), &writtenSize);
+        WriteProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress + sizeof(inputDataBuffer) + sizeof(copyDataBuffer) - sizeof(XrVector3f)), (const void*)&copyCamera, sizeof(copyDataBuffer), &writtenSize);
+#endif
     }
     else if (retryFindingCemu > 0)
         retryFindingCemu--;
@@ -433,4 +445,9 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
 HWND* getCemuHWND()
 {
     return &cemuHWND;
+}
+
+HOOK_MODE getHookMode()
+{
+    return hookStatus;
 }
