@@ -10,5 +10,5 @@ enum class HOOK_MODE : byte {
 
 void InitializeCemuHooking();
 void SetBotWPositions(XrView leftScreen, XrView rightScreen);
-HWND* getCemuHWND();
+HWND getCemuHWND();
 HOOK_MODE getHookMode();

@@ -23,6 +23,7 @@ name = First-Person
 category = Camera Mode
 $mode:int = 1
 $linkOpacity = 0.0
+$cameraDistance = 0.1
 
 # Third Person - Camera Distance
 

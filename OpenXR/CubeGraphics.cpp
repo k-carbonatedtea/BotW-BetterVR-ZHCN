@@ -176,7 +176,6 @@ namespace {
             m_initialTextureDesc.Usage = D3D11_USAGE_DEFAULT;
             CHECK_HRCMD(m_device->CreateTexture2D(&m_initialTextureDesc, NULL, m_initialTexture.put()));
 
-            m_time_since_start = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
             m_setup_not_done = true;
         }
 
@@ -237,13 +236,12 @@ namespace {
             ID3D11RenderTargetView* renderTargets[] = {renderTargetView.get()};
             m_deviceContext->OMSetRenderTargets((UINT)std::size(renderTargets), renderTargets, depthStencilView.get());
 
-            std::chrono::milliseconds currTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-            if (currTime.count() - m_time_since_start.count() > (1000 * 5) && *getCemuHWND() != NULL && getHookMode() == HOOK_MODE::GFX_PACK_ENABLED || getHookMode() == HOOK_MODE::BOTH_ENABLED_PRECALC || getHookMode() == HOOK_MODE::BOTH_ENABLED_GFX_CALC) {
+            if (getCemuHWND() != NULL && getHookMode() == HOOK_MODE::GFX_PACK_ENABLED || getHookMode() == HOOK_MODE::BOTH_ENABLED_PRECALC || getHookMode() == HOOK_MODE::BOTH_ENABLED_GFX_CALC) {
                 if (m_setup_not_done) {
                     m_setup_not_done = false;
 
                     // Find the correct monitor to mirror
-                    HMONITOR cemuMonitorHandle = MonitorFromWindow(*getCemuHWND(), MONITOR_DEFAULTTOPRIMARY);
+                    HMONITOR cemuMonitorHandle = MonitorFromWindow(getCemuHWND(), MONITOR_DEFAULTTOPRIMARY);
 
                     UINT i = 0;
                     IDXGIOutput* pOutput;
@@ -265,25 +263,48 @@ namespace {
                     m_dxgiOutputApplication->GetDesc(&m_outputDesc);
                     output1->Release();
                 }
-                IDXGIResource *m_dxgiResource;
-                ID3D11Resource *m_outputResource;
+                IDXGIResource *dxgiResource = nullptr;
+                ID3D11Resource *outputResource = nullptr;
 
                 DXGI_OUTDUPL_FRAME_INFO dxgiFrameInfo;
-                HRESULT hr = m_dxgiOutputApplication->AcquireNextFrame(INFINITE, &dxgiFrameInfo, &m_dxgiResource);
+                HRESULT hr = m_dxgiOutputApplication->AcquireNextFrame(INFINITE, &dxgiFrameInfo, &dxgiResource);
 
-                m_dxgiResource->QueryInterface(IID_PPV_ARGS(&m_outputResource));
-                m_dxgiResource->Release();
+                if (hr == DXGI_ERROR_ACCESS_LOST || hr == DXGI_ERROR_WAIT_TIMEOUT) {
+                    // When you go into full-screen, this'll prevent the game from erroring out
+                    D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceView = {};
+                    shaderResourceView.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+                    shaderResourceView.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                    shaderResourceView.Texture2D.MostDetailedMip = 0;
+                    shaderResourceView.Texture2D.MipLevels = 1;
 
-                D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceView;
-                shaderResourceView.Format = m_outputDesc.ModeDesc.Format;
-                shaderResourceView.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-                shaderResourceView.Texture2D.MostDetailedMip = 0;
-                shaderResourceView.Texture2D.MipLevels = 1;
+                    ID3D11ShaderResourceView* outputResourceView[1];
 
-                ID3D11ShaderResourceView* outputResourceView[1];
+                    m_device->CreateShaderResourceView(m_initialTexture.get(), &shaderResourceView, outputResourceView);
+                    m_deviceContext->PSSetShaderResources(3, 1, outputResourceView);
 
-                m_device->CreateShaderResourceView(m_outputResource, &shaderResourceView, outputResourceView);
-                m_deviceContext->PSSetShaderResources(0, 1, outputResourceView);
+                    if (hr == DXGI_ERROR_ACCESS_LOST) {
+                        // Release and reset everything so that it'll be recreated in the next frame
+                        m_dxgiOutputApplication->ReleaseFrame();
+                        m_dxgiOutputApplication->Release();
+                        m_dxgiOutputApplication = nullptr;
+                        m_setup_not_done = true;
+                    }
+                }
+                else {
+                    dxgiResource->QueryInterface(IID_PPV_ARGS(&outputResource));
+                    dxgiResource->Release();
+                    
+                    D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceView;
+                    shaderResourceView.Format = m_outputDesc.ModeDesc.Format;
+                    shaderResourceView.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                    shaderResourceView.Texture2D.MostDetailedMip = 0;
+                    shaderResourceView.Texture2D.MipLevels = 1;
+                    
+                    ID3D11ShaderResourceView* outputResourceView[1];
+                    
+                    m_device->CreateShaderResourceView(outputResource, &shaderResourceView, outputResourceView);
+                    m_deviceContext->PSSetShaderResources(0, 1, outputResourceView);
+                }
             }
             else {
                 D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceView = {};
@@ -346,7 +367,6 @@ namespace {
         DXGI_OUTDUPL_FRAME_INFO m_outputFrameInfo;
         D3D11_TEXTURE2D_DESC m_placeholderFrameDesc;
         bool m_setup_not_done;
-        std::chrono::milliseconds m_time_since_start;
     };
 } // namespace
 

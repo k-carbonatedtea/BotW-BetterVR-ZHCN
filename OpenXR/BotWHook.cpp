@@ -31,7 +31,7 @@ float reverseFloatEndianess(float inFloat) {
 #define APP_CALC_CONVERT 1          // Used as an intermediary for converting the library-dependent code into native graphic pack code.
 #define APP_CALC_LIBRARY 2          // Used for easily testing code using libraries.
 
-#define CALC_MODE APP_CALC_LIBRARY
+#define CALC_MODE APP_CALC_CONVERT
 
 
 struct inputDataBuffer {
@@ -198,7 +198,7 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
 #elif CALC_MODE == APP_CALC_CONVERT || CALC_MODE == APP_CALC_LIBRARY
         ReadProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress), (void*)&hookStatus, sizeof(HOOK_MODE), &writtenSize);
 
-        ReadProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress + sizeof(inputDataBuffer)), (void*)&copyCamera, sizeof(copyDataBuffer), &writtenSize);
+        ReadProcessMemory(cemuHandle, (void*)(baseAddress + vrAddress + sizeof(inputDataBuffer)), (void*)&copyCamera, sizeof(copyDataBuffer) - sizeof(XrVector3f), &writtenSize);
         reverseCopyBufferEndianess(&copyCamera);
 
         if (hookStatus == HOOK_MODE::DISABLED) {
@@ -245,6 +245,52 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
             float newRotY = 0.0f;
             float newRotZ = 0.0f;
 
+            float setting_heightPositionOffset = 0.8f;
+            float setting_headPositionSensitivity = 2.0f;
+
+            // Lambda functions
+            struct Vec3 {
+                float x;
+                float y;
+                float z;
+            };
+
+            auto squareRoot = [](float n) -> float {
+                float x = n;
+                x = 0.5 * (x + (n / x));
+                x = 0.5 * (x + (n / x));
+                x = 0.5 * (x + (n / x));
+                x = 0.5 * (x + (n / x));
+                x = 0.5 * (x + (n / x));
+                x = 0.5 * (x + (n / x));
+                x = 0.5 * (x + (n / x));
+                return x;
+            };
+
+            auto crossProduct = [](Vec3 a, Vec3 b) -> Vec3 {
+                Vec3 retVec;
+                retVec.x = a.y * b.z - b.y * a.z;
+                retVec.y = a.z * b.x - b.z * a.x;
+                retVec.z = a.x * b.y - b.x * a.y;
+                return retVec;
+            };
+
+            auto multiplyVector = [](Vec3 a, float multiplier) -> Vec3 {
+                return {
+                    a.x * multiplier,
+                    a.y * multiplier,
+                    a.z * multiplier
+                };
+            };
+
+            auto normalize = [&](Vec3* a) {
+                float vectorLength = squareRoot(a->x*a->x + a->y*a->y + a->z*a->z);
+                a->x = a->x / vectorLength;
+                a->y = a->y / vectorLength;
+                a->z = a->z / vectorLength;
+            };
+
+
             // Check if calculation should be done
             if (oldTargetX == 0.0f && oldTargetY == 0.0f && oldTargetZ == 0.0f) {
                 newPosX = oldPosX;
@@ -260,46 +306,30 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
             }
 
             // Calculate direction vector by subtraction
-            float directionX = oldTargetX - oldPosX;
-            float directionY = oldTargetY - oldPosY;
-            float directionZ = oldTargetZ - oldPosZ;
+            Vec3 directionVector = { oldTargetX - oldPosX, oldTargetY - oldPosY, oldTargetZ - oldPosZ };
+            normalize(&directionVector);
 
-            // Normalize forward/direction vector
-            float directionLength = sqrtf(directionX * directionX + directionY * directionY + directionZ * directionZ);
-            directionX = directionX / directionLength;
-            directionY = directionY / directionLength;
-            directionZ = directionZ / directionLength;
-
-            float viewMatrix[3][3];
-
-            viewMatrix[2][0] = -directionX;
-            viewMatrix[2][1] = -directionY;
-            viewMatrix[2][2] = -directionZ;
+            Vec3 viewMatrix[3];
+            viewMatrix[2].x = -directionVector.x;
+            viewMatrix[2].y = -directionVector.y;
+            viewMatrix[2].z = -directionVector.z;
 
             // Cross product to get right row
-            float lookUpX = 0.0f;
-            float lookUpY = 1.0f;
-            float lookUpZ = 0.0f;
-            float rightX = lookUpY * viewMatrix[2][2] - viewMatrix[2][1] * lookUpZ;
-            float rightY = lookUpZ * viewMatrix[2][0] - viewMatrix[2][2] * lookUpX;
-            float rightZ = lookUpX * viewMatrix[2][1] - viewMatrix[2][0] * lookUpY;
+            Vec3 lookUpVector = {0.0f, 1.0f, 0.0f};
+            Vec3 rightVector = crossProduct(lookUpVector, viewMatrix[2]);
 
-            float dotRow = rightX * rightX + rightY * rightY + rightZ * rightZ;
-            float multiplier = 1.0f / sqrtf(dotRow < 0.00000001f ? 0.00000001f : dotRow);
-            viewMatrix[0][0] = rightX * multiplier;
-            viewMatrix[0][1] = rightY * multiplier;
-            viewMatrix[0][2] = rightZ * multiplier;
+            float dotRow = rightVector.x*rightVector.x + rightVector.y*rightVector.y + rightVector.z*rightVector.z;
+            float multiplier = 1.0f / squareRoot(dotRow < 0.00000001f ? 0.00000001f : dotRow);
+            viewMatrix[0] = multiplyVector(rightVector, multiplier);
 
             // Cross product to get upwards row
-            viewMatrix[1][0] = viewMatrix[2][1] * viewMatrix[0][2] - viewMatrix[0][1] * viewMatrix[2][2];
-            viewMatrix[1][1] = viewMatrix[2][2] * viewMatrix[0][0] - viewMatrix[0][2] * viewMatrix[2][0];
-            viewMatrix[1][2] = viewMatrix[2][0] * viewMatrix[0][1] - viewMatrix[0][0] * viewMatrix[2][1];
+            viewMatrix[1] = crossProduct(viewMatrix[2], viewMatrix[0]);
 
             // Convert rotation matrix to quaternion
-            float fourXSquaredMinus1 = viewMatrix[0][0] - viewMatrix[1][1] - viewMatrix[2][2];
-            float fourYSquaredMinus1 = viewMatrix[1][1] - viewMatrix[0][0] - viewMatrix[2][2];
-            float fourZSquaredMinus1 = viewMatrix[2][2] - viewMatrix[0][0] - viewMatrix[1][1];
-            float fourWSquaredMinus1 = viewMatrix[0][0] + viewMatrix[1][1] + viewMatrix[2][2];
+            float fourXSquaredMinus1 = viewMatrix[0].x - viewMatrix[1].y - viewMatrix[2].z;
+            float fourYSquaredMinus1 = viewMatrix[1].y - viewMatrix[0].x - viewMatrix[2].z;
+            float fourZSquaredMinus1 = viewMatrix[2].z - viewMatrix[0].x - viewMatrix[1].y;
+            float fourWSquaredMinus1 = viewMatrix[0].x + viewMatrix[1].y + viewMatrix[2].z;
 
             int biggestIndex = 0;
             float fourBiggestSquaredMinus1 = fourWSquaredMinus1;
@@ -316,7 +346,7 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
                 biggestIndex = 3;
             }
 
-            float biggestValue = sqrtf(fourBiggestSquaredMinus1 + 1.0f) * 0.5f;
+            float biggestValue = squareRoot(fourBiggestSquaredMinus1 + 1.0f) * 0.5f;
             float mult = 0.25f / biggestValue;
 
             float q_w = 0.0f;
@@ -326,26 +356,26 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
 
             if (biggestIndex == 0) {
                 q_w = biggestValue;
-                q_x = (viewMatrix[1][2] - viewMatrix[2][1]) * mult;
-                q_y = (viewMatrix[2][0] - viewMatrix[0][2]) * mult;
-                q_z = (viewMatrix[0][1] - viewMatrix[1][0]) * mult;
+                q_x = (viewMatrix[1].z - viewMatrix[2].y) * mult;
+                q_y = (viewMatrix[2].x - viewMatrix[0].z) * mult;
+                q_z = (viewMatrix[0].y - viewMatrix[1].x) * mult;
             }
             else if (biggestIndex == 1) {
-                q_w = (viewMatrix[1][2] - viewMatrix[2][1]) * mult;
+                q_w = (viewMatrix[1].z - viewMatrix[2].y) * mult;
                 q_x = biggestValue;
-                q_y = (viewMatrix[0][1] + viewMatrix[1][0]) * mult;
-                q_z = (viewMatrix[2][0] + viewMatrix[0][2]) * mult;
+                q_y = (viewMatrix[0].y + viewMatrix[1].x) * mult;
+                q_z = (viewMatrix[2].x + viewMatrix[0].z) * mult;
             }
             else if (biggestIndex == 2) {
-                q_w = (viewMatrix[2][0] - viewMatrix[0][2]) * mult;
-                q_x = (viewMatrix[0][1] + viewMatrix[1][0]) * mult;
+                q_w = (viewMatrix[2].x - viewMatrix[0].z) * mult;
+                q_x = (viewMatrix[0].y + viewMatrix[1].x) * mult;
                 q_y = biggestValue;
-                q_z = (viewMatrix[1][2] + viewMatrix[2][1]) * mult;
+                q_z = (viewMatrix[1].z + viewMatrix[2].y) * mult;
             }
             else if (biggestIndex == 3) {
-                q_w = (viewMatrix[0][1] - viewMatrix[1][0]) * mult;
-                q_x = (viewMatrix[2][0] + viewMatrix[0][2]) * mult;
-                q_y = (viewMatrix[1][2] + viewMatrix[2][1]) * mult;
+                q_w = (viewMatrix[0].y - viewMatrix[1].x) * mult;
+                q_x = (viewMatrix[2].x + viewMatrix[0].z) * mult;
+                q_y = (viewMatrix[1].z + viewMatrix[2].y) * mult;
                 q_z = biggestValue;
             }
 
@@ -366,38 +396,53 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
             float qwy = new_q_w * new_q_y;
             float qwz = new_q_w * new_q_z;
 
-            float newViewMatrix[3][3];
-            newViewMatrix[0][0] = 1.0f - 2.0f * (qyy + qzz);
-            newViewMatrix[0][1] = 2.0f * (qxy + qwz);
-            newViewMatrix[0][2] = 2.0f * (qxz - qwy);
+            Vec3 newViewMatrix[3];
+            newViewMatrix[0].x = 1.0f - 2.0f * (qyy + qzz);
+            newViewMatrix[0].y = 2.0f * (qxy + qwz);
+            newViewMatrix[0].z = 2.0f * (qxz - qwy);
 
-            newViewMatrix[1][0] = 2.0f * (qxy - qwz);
-            newViewMatrix[1][1] = 1.0f - 2.0f * (qxx + qzz);
-            newViewMatrix[1][2] = 2.0f * (qyz + qwx);
+            newViewMatrix[1].x = 2.0f * (qxy - qwz);
+            newViewMatrix[1].y = 1.0f - 2.0f * (qxx + qzz);
+            newViewMatrix[1].z = 2.0f * (qyz + qwx);
 
-            newViewMatrix[2][0] = 2.0f * (qxz + qwy);
-            newViewMatrix[2][1] = 2.0f * (qyz - qwx);
-            newViewMatrix[2][2] = 1.0f - 2.0f * (qxx + qyy);
+            newViewMatrix[2].x = 2.0f * (qxz + qwy);
+            newViewMatrix[2].y = 2.0f * (qyz - qwx);
+            newViewMatrix[2].z = 1.0f - 2.0f * (qxx + qyy);
 
-            // Change camera variables
-            float distance = sqrtf(((oldTargetX - oldPosX) * (oldTargetX - oldPosX)) + ((oldTargetY - oldPosY) * (oldTargetY - oldPosY)) + ((oldTargetZ - oldPosZ) * (oldTargetZ - oldPosZ)));
-            float targetVecX = (newViewMatrix[2][0] * -1.0f) * distance;
-            float targetVecY = (newViewMatrix[2][1] * -1.0f) * distance;
-            float targetVecZ = (newViewMatrix[2][2] * -1.0f) * distance;
+            // Calculate rotation offset
+            float distance = squareRoot(((oldTargetX - oldPosX) * (oldTargetX - oldPosX)) + ((oldTargetY - oldPosY) * (oldTargetY - oldPosY)) + ((oldTargetZ - oldPosZ) * (oldTargetZ - oldPosZ)));
+            Vec3 rotationOffset = { (newViewMatrix[2].x * -1.0f) * distance, (newViewMatrix[2].y * -1.0f) * distance , (newViewMatrix[2].z * -1.0f) * distance };
 
-            newTargetX = oldPosX + targetVecX;
-            newTargetY = oldPosY + targetVecY;
-            newTargetZ = oldPosZ + targetVecZ;
+            // Calculate headset position offset
+            Vec3 positionOffset;
+            Vec3 hmdPosVector = { hmdPosX, hmdPosY, hmdPosZ };
+            Vec3 quatVector = { new_q_x, new_q_y, new_q_z };
 
-            newPosX = oldPosX - (targetVecX * 0.0f);
-            newPosY = oldPosY - (targetVecY * 0.0f);
-            newPosZ = oldPosZ - (targetVecZ * 0.0f);
+            Vec3 midResult = crossProduct(quatVector, hmdPosVector);
+            Vec3 addResult = multiplyVector(hmdPosVector, new_q_w);
+            midResult.x += addResult.x;
+            midResult.y += addResult.y;
+            midResult.z += addResult.z;
 
-            newRotX = newViewMatrix[1][0];
-            newRotY = newViewMatrix[1][1];
-            newRotZ = newViewMatrix[1][2];
+            positionOffset = multiplyVector(crossProduct(quatVector, midResult), 2.0f);
+            positionOffset.x += hmdPosVector.x;
+            positionOffset.y += hmdPosVector.y;
+            positionOffset.z += hmdPosVector.z;
 
-            // Set global variables
+            // Set final values
+            newTargetX = oldPosX + rotationOffset.x + (positionOffset.x * setting_headPositionSensitivity);
+            newTargetY = oldPosY + rotationOffset.y + (positionOffset.y * setting_headPositionSensitivity) - setting_heightPositionOffset;
+            newTargetZ = oldPosZ + rotationOffset.z + (positionOffset.z * setting_headPositionSensitivity);
+
+            newPosX = oldPosX + (positionOffset.x * setting_headPositionSensitivity);
+            newPosY = oldPosY + (positionOffset.y * setting_headPositionSensitivity) - setting_heightPositionOffset;
+            newPosZ = oldPosZ + (positionOffset.z * setting_headPositionSensitivity);
+
+            newRotX = newViewMatrix[1].x;
+            newRotY = newViewMatrix[1].y;
+            newRotZ = newViewMatrix[1].z;
+
+            // Set the output data to the final values
             copyCamera.target.x = newTargetX;
             copyCamera.target.y = newTargetY;
             copyCamera.target.z = newTargetZ;
@@ -421,7 +466,7 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
 
             gameQuat = gameQuat * hmdQuat;
 
-            Eigen::Matrix3f rotMatrix = gameQuat.toRotationMatrix();
+            Eigen::Matrix3f rotMatrix = hmdQuat.toRotationMatrix();
 
             Eigen::Vector3f targetVec = rotMatrix * Eigen::Vector3f(0.0, 0.0, -1.0);
             float distance = (float)std::hypot(copyCamera.target.x - copyCamera.pos.x, copyCamera.target.y - copyCamera.pos.y, copyCamera.target.z - copyCamera.pos.z);
@@ -429,12 +474,12 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
             float targetVecY = targetVec.y() * distance;
             float targetVecZ = targetVec.z() * distance;
 
-            copyCamera.target.x = copyCamera.pos.x + targetVecX;
-            copyCamera.target.y = copyCamera.pos.y + targetVecY;
-            copyCamera.target.z = copyCamera.pos.z + targetVecZ;
-
             Eigen::Vector3f hmdPos(middleScreen.position.x, middleScreen.position.y, middleScreen.position.z);
             hmdPos = gameQuat * hmdPos;
+
+            copyCamera.target.x = copyCamera.pos.x + targetVecX + (hmdPos.x() * const_HeadPositionalMovementSensitivity);
+            copyCamera.target.y = copyCamera.pos.y + targetVecY + (hmdPos.y() * const_HeadPositionalMovementSensitivity);
+            copyCamera.target.z = copyCamera.pos.z + targetVecZ + (hmdPos.z() * const_HeadPositionalMovementSensitivity);
 
             copyCamera.pos.x = copyCamera.pos.x + hmdPos.x() * const_HeadPositionalMovementSensitivity;
             copyCamera.pos.y = copyCamera.pos.y + hmdPos.y() * const_HeadPositionalMovementSensitivity;
@@ -456,9 +501,9 @@ void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
         InitializeCemuHooking();
 }
 
-HWND* getCemuHWND()
+HWND getCemuHWND()
 {
-    return &cemuHWND;
+    return cemuHWND;
 }
 
 HOOK_MODE getHookMode()

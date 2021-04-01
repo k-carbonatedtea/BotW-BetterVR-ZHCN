@@ -659,7 +659,7 @@ namespace {
 
             LONGLONG renderTime = currentFrameTime.QuadPart - previousFrameTime.QuadPart;
 
-            if (debugPrintCounter > 30) {
+            if (debugPrintCounter > 50) {
                 QueryPerformanceFrequency(&timeFrequency);
                 OutputDebugStringA((std::string("Render Time: ") + std::to_string((((double)renderTime * 1000.0f) / (double)timeFrequency.QuadPart)) + "ms\n").c_str());
                 debugPrintCounter = 0;
