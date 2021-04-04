@@ -69,14 +69,16 @@ namespace {
             float4 MainPS(PSInput input) : SV_TARGET {
                 float4 screenColor;
                 if (input.uv0.x == 0.0) {
-                    screenColor = screen.Sample(screenSampler, input.Pos.xy / float2(viewportSize.x * 2.0, viewportSize.y));
+                    float2 xyPos = input.Pos.xy / float2(viewportSize.x * 2.0, viewportSize.y);
+                    //xyPos.x -= 0.25;
+                    screenColor = screen.Sample(screenSampler, xyPos);
                 }
                 else {
                     float2 xyPos = input.Pos.xy / float2(viewportSize.x * 2.0, viewportSize.y);
                     xyPos.x += 0.5;
                     screenColor = screen.Sample(screenSampler, xyPos);
                 }
-                return float4(screenColor.rgb, 1);
+                return float4(screenColor);
             }
             )_";
 
@@ -184,15 +186,14 @@ namespace {
                     // Initialize dublication
                     IDXGIOutput1* output1;
                     pOutput->QueryInterface(IID_PPV_ARGS(&output1));
-                    
+                    DXGI_OUTPUT_DESC monitorDesc;
+                    output1->GetDesc(&monitorDesc);
+
+#ifndef _DEBUG
                     // Check if Cemu is fullscreen
                     RECT cemuCoords;
                     GetWindowRect(getCemuHWND(), &cemuCoords);
-
-#ifndef _DEBUG
-                    DXGI_OUTPUT_DESC desc;
-                    output1->GetDesc(&desc);
-                    if (desc.DesktopCoordinates.left == cemuCoords.left && desc.DesktopCoordinates.right == cemuCoords.right && desc.DesktopCoordinates.top == cemuCoords.top && desc.DesktopCoordinates.bottom == cemuCoords.bottom) {
+                    if (monitorDesc.DesktopCoordinates.left == cemuCoords.left && monitorDesc.DesktopCoordinates.right == cemuCoords.right && monitorDesc.DesktopCoordinates.top == cemuCoords.top && monitorDesc.DesktopCoordinates.bottom == cemuCoords.bottom) {
                         setCemuFullScreen(true);
                     }
                     else setCemuFullScreen(false);
@@ -202,11 +203,26 @@ namespace {
                     pOutput->Release();
 
                     output1->DuplicateOutput(m_device.get(), m_dxgiOutputApplication.put());
+                    m_outputDesc = DXGI_OUTDUPL_DESC{};
                     m_dxgiOutputApplication->GetDesc(&m_outputDesc);
                     output1->Release();
+
+                    if (m_framebufferTexture == nullptr) {
+                        m_framebufferTextureDesc.Height = monitorDesc.DesktopCoordinates.bottom;
+                        m_framebufferTextureDesc.Width = monitorDesc.DesktopCoordinates.right * 2;
+                        m_framebufferTextureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+                        m_framebufferTextureDesc.ArraySize = 1;
+                        m_framebufferTextureDesc.BindFlags = D3D11_BIND_FLAG::D3D11_BIND_SHADER_RESOURCE;
+                        m_framebufferTextureDesc.MiscFlags = 0;
+                        m_framebufferTextureDesc.SampleDesc.Count = 1;
+                        m_framebufferTextureDesc.SampleDesc.Quality = 0;
+                        m_framebufferTextureDesc.MipLevels = 1;
+                        m_framebufferTextureDesc.CPUAccessFlags = 0;
+                        m_framebufferTextureDesc.Usage = D3D11_USAGE_DEFAULT;
+                        CHECK_HRCMD(m_device->CreateTexture2D(&m_framebufferTextureDesc, NULL, m_framebufferTexture.put()));
+                    }
                 }
-                IDXGIResource *dxgiResource = nullptr;
-                ID3D11Resource *outputResource = nullptr;
+                IDXGIResource* dxgiResource = nullptr;
 
                 DXGI_OUTDUPL_FRAME_INFO dxgiFrameInfo;
                 HRESULT hr = m_dxgiOutputApplication->AcquireNextFrame(INFINITE, &dxgiFrameInfo, &dxgiResource);
@@ -233,19 +249,31 @@ namespace {
                     }
                 }
                 else {
+                    ID3D11Resource* outputResource;
                     dxgiResource->QueryInterface(IID_PPV_ARGS(&outputResource));
                     dxgiResource->Release();
-                    
+
+                    D3D11_BOX copyBox;
+                    copyBox.left = 0;
+                    copyBox.right = m_framebufferTextureDesc.Width / 2;
+                    copyBox.top = 0;
+                    copyBox.bottom = m_framebufferTextureDesc.Height;
+                    copyBox.front = 0;
+                    copyBox.back = 1;
+                    const D3D11_BOX* copyBoxPtr = &copyBox;
+                    m_deviceContext->CopySubresourceRegion(m_framebufferTexture.get(), 0, (getRenderSide() ? 0 : m_framebufferTextureDesc.Width / 2), 0, 0, outputResource, 0, copyBoxPtr);
+                    leftSide = !leftSide;
+
                     D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceView;
                     shaderResourceView.Format = m_outputDesc.ModeDesc.Format;
                     shaderResourceView.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
                     shaderResourceView.Texture2D.MostDetailedMip = 0;
                     shaderResourceView.Texture2D.MipLevels = 1;
                     
-                    ID3D11ShaderResourceView* outputResourceView[1];
+                    ID3D11ShaderResourceView* framebufferResourceView[1];
                     
-                    m_device->CreateShaderResourceView(outputResource, &shaderResourceView, outputResourceView);
-                    m_deviceContext->PSSetShaderResources(0, 1, outputResourceView);
+                    m_device->CreateShaderResourceView(m_framebufferTexture.get(), &shaderResourceView, framebufferResourceView);
+                    m_deviceContext->PSSetShaderResources(0, 1, framebufferResourceView);
                 }
             }
             else {
@@ -291,18 +319,23 @@ namespace {
         winrt::com_ptr<ID3D11Buffer> m_cubeIndexBuffer;
 
         winrt::com_ptr<IDXGIOutputDuplication> m_dxgiOutputApplication;
+        DXGI_OUTDUPL_DESC m_outputDesc;
+        DXGI_OUTDUPL_FRAME_INFO m_outputFrameInfo;
+
         winrt::com_ptr<ID3D11Texture2D> m_initialTexture;
+        D3D11_TEXTURE2D_DESC m_initialTextureDesc;
+
+        winrt::com_ptr<ID3D11Texture2D> m_framebufferTexture;
+        D3D11_TEXTURE2D_DESC m_framebufferTextureDesc;
+
         winrt::com_ptr<ID3D11SamplerState> m_outputSampler;
         winrt::com_ptr<ID3D11VertexShader> m_outputVertexShader;
         winrt::com_ptr<ID3D11PixelShader> m_outputPixelShader;
         winrt::com_ptr<ID3D11InputLayout> m_outputInputLayout;
-        DXGI_OUTDUPL_DESC m_outputDesc;
-        D3D11_TEXTURE2D_DESC m_initialTextureDesc;
-        winrt::com_ptr<ID3D11Texture2D> m_placeholderTexture;
-        DXGI_OUTDUPL_FRAME_INFO m_outputFrameInfo;
-        D3D11_TEXTURE2D_DESC m_placeholderFrameDesc;
         bool m_setup_not_done;
         bool m_cemu_fullscreen;
+
+        bool leftSide;
     };
 } // namespace
 

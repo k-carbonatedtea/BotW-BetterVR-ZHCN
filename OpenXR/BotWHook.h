@@ -14,3 +14,4 @@ HWND getCemuHWND();
 HOOK_MODE getHookMode();
 void setCemuFullScreen(bool enabled);
 bool getCemuFullScreen();
+bool getRenderSide();

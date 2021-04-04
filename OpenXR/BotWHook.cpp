@@ -70,6 +70,7 @@ void reverseCopyBufferEndianess(copyDataBuffer* data) {
 }
 
 bool cemuFullscreen = false;
+bool leftSideRender = true;
 HOOK_MODE hookStatus;
 inputDataBuffer inputCamera;
 copyDataBuffer copyCamera;
@@ -147,13 +148,15 @@ void InitializeCemuHooking() {
 }
 
 int countdownPrint = 0;
-constexpr float const_HeadPositionalMovementSensitivity = 2.5f; // This would probably be different from the third-person perspective then the first-person perspective.
+constexpr float const_HeadPositionalMovementSensitivity = 1.0f;
 
 void SetBotWPositions(XrView leftScreen, XrView rightScreen) {
     UNUSED(leftScreen);
     UNUSED(rightScreen);
 
-    XrPosef middleScreen = xr::math::Pose::Slerp(leftScreen.pose, rightScreen.pose, 0.5);
+    leftSideRender = !leftSideRender;
+    XrPosef middleScreen = leftSideRender ? leftScreen.pose : rightScreen.pose;
+    //XrPosef middleScreen = xr::math::Pose::Slerp(leftScreen.pose, rightScreen.pose, 0.5);
 
     if (baseAddress != NULL && vrAddress != NULL) {
         DWORD cemuExitCode = NULL;
@@ -522,4 +525,8 @@ void setCemuFullScreen(bool enabled) {
 
 bool getCemuFullScreen() {
     return cemuFullscreen;
+}
+
+bool getRenderSide() {
+    return leftSideRender;
 }
