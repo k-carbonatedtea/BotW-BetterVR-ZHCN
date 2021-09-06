@@ -181,12 +181,9 @@ void cameraHookUpdate(PPCInterpreter_t* hCPU) {
 		swapEndianness(inputData.newPosY);
 		swapEndianness(inputData.newPosZ);
 
-		if (inputData.newPosX != 0 && inputData.newPosY != 0 && inputData.newPosZ != 0)
-		{
-			inputData.newPosX += (hmdPos.x * inputData.headPositionSensitivitySetting) - (hmdPos.x - eyePos.x);
-			inputData.newPosY += (hmdPos.y * inputData.headPositionSensitivitySetting) - (hmdPos.y - eyePos.y);
-			inputData.newPosZ += (hmdPos.z * inputData.headPositionSensitivitySetting) - (hmdPos.z - eyePos.z);
-		}
+		inputData.newPosX += (hmdPos.x * inputData.headPositionSensitivitySetting) - (hmdPos.x - eyePos.x);
+		inputData.newPosY += (hmdPos.y * inputData.headPositionSensitivitySetting) - (hmdPos.y - eyePos.y);
+		inputData.newPosZ += (hmdPos.z * inputData.headPositionSensitivitySetting) - (hmdPos.z - eyePos.z);
 	}
 	else
 	{
@@ -195,7 +192,7 @@ void cameraHookUpdate(PPCInterpreter_t* hCPU) {
 		inputData.newPosZ = inputData.oldPosZ + (hmdPos.z * inputData.headPositionSensitivitySetting) + (hmdPos.z - eyePos.z);
 	}
 
-	logPrint(std::to_string(inputData.newPosX) + " | " + std::to_string(inputData.newPosY) + " | " + std::to_string(inputData.newPosZ));
+	//logPrint(std::to_string(inputData.newPosX) + " | " + std::to_string(inputData.newPosY) + " | " + std::to_string(inputData.newPosZ));
 
 	inputData.newTargetX = inputData.newPosX + ((combinedMatrix[2][0] * -1.0f) * originalCameraDistance);
 	inputData.newTargetY = inputData.newPosY + ((combinedMatrix[2][1] * -1.0f) * originalCameraDistance);
