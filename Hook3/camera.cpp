@@ -47,6 +47,25 @@ graphicPackData cameraGetGraphicPackSettings() {
 	return retCopy;
 }
 
+struct LinkData {
+	float posX = 0;
+	float posY = 0;
+	float posZ = 0;
+};
+
+LinkData getLinkData() {
+	LinkData retCopy;
+
+	uint32_t actorSystemStructureOffset = 0;
+	readMemoryBE(0x1046CD00, &actorSystemStructureOffset);
+
+	readMemoryBE((uint64_t)actorSystemStructureOffset + 0x9C + 0x0, &retCopy.posX);
+	readMemoryBE((uint64_t)actorSystemStructureOffset + 0x9C + 0x4, &retCopy.posY);
+	readMemoryBE((uint64_t)actorSystemStructureOffset + 0x9C + 0x8, &retCopy.posZ);
+
+	return retCopy;
+}
+
 void cameraInitialize() {
 	osLib_registerHLEFunctionType osLib_registerHLEFunction = (osLib_registerHLEFunctionType)GetProcAddress(GetModuleHandleA("Cemu.exe"), "osLib_registerHLEFunction");
 
@@ -150,6 +169,8 @@ void cameraHookUpdate(PPCInterpreter_t* hCPU) {
 	readMemory(graphicPackDataOffset, &inputData);
 	swapGraphicPackDataEndianness(&inputData);
 
+	LinkData linkData = getLinkData();
+
 	XrView* currView = currSwapSide == SWAP_SIDE::RIGHT ? &leftView : &rightView;
 	glm::fvec3 eyePos(currView->pose.position.x, currView->pose.position.y, currView->pose.position.z);
 
@@ -170,14 +191,10 @@ void cameraHookUpdate(PPCInterpreter_t* hCPU) {
 	glm::fvec3 rotatedHmdPos = glm::toMat3(combinedQuat) * eyePos;
 	
 	if (inputData.viewMode == 1) {
-		readMemory(0x1055300C + 0x0, &inputData.newPosX);
-		readMemory(0x1055300C + 0x4, &inputData.newPosY);
-		readMemory(0x1055300C + 0x8, &inputData.newPosZ);
 
-
-		swapEndianness(inputData.newPosX); // readMemoryBE() seems to be broken, it outputs the same stuff as readMemory.
-		swapEndianness(inputData.newPosY); // I might fix it later.
-		swapEndianness(inputData.newPosZ);
+		inputData.newPosX = linkData.posX;
+		inputData.newPosY = linkData.posY;
+		inputData.newPosZ = linkData.posZ;
 
 		inputData.newPosX -= (hmdPos.x - eyePos.x);
 		inputData.newPosY -= (hmdPos.y - eyePos.y);
