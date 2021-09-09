@@ -348,6 +348,10 @@ VK_LAYER_EXPORT VkResult VKAPI_CALL Layer_QueueSubmit(VkQueue queue, uint32_t su
 			if (pSubmits[i].pCommandBuffers[j] == presentImageCommandBuffer && currRenderStatus == RENDER_STATUS::IMAGE_COPIED) {
 				uint64_t waitForKeyValue = 1;
 				uint64_t releaseToKeyValue = 1;
+				if (currSwapSide == SWAP_SIDE::LEFT) {
+					waitForKeyValue = 1;
+					releaseToKeyValue = 2;
+				}
 				uint32_t acquireTimeout = INFINITE;
 				keyedMutexAcquireAndRelease.acquireCount = 1;
 				keyedMutexAcquireAndRelease.pAcquireSyncs = currSwapSide == SWAP_SIDE::LEFT ? &leftEyeResources.vkImageMemory : &rightEyeResources.vkImageMemory;

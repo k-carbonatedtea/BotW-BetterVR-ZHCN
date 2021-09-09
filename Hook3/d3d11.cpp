@@ -569,7 +569,7 @@ void dx11RenderLayer(ID3D11Texture2D* swapchainTargetTexture, sideTextureResourc
 
 	LARGE_INTEGER beforeAcquire;
 	QueryPerformanceCounter(&beforeAcquire);
-	checkMutexHResult(leftEyeResources.keyedMutex->AcquireSync(1, INFINITE));
+	checkMutexHResult(leftEyeResources.keyedMutex->AcquireSync(2, INFINITE));
 	checkMutexHResult(rightEyeResources.keyedMutex->AcquireSync(1, INFINITE));
 	//logTimeElapsed("Acquiring the lock on the dx11 side took ", beforeAcquire);
 
