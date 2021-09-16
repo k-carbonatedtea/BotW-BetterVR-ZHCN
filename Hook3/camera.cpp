@@ -9,13 +9,9 @@ typedef void (*osLib_registerHLEFunctionType)(const char* libraryName, const cha
 struct graphicPackData {
 	int32_t viewMode;
 	int32_t firstPersonCameraMovement;
-	int32_t swappedFlipSideSetting;
-	float eyeSeparation;
 	float headPositionSensitivitySetting;
-	float heightPositionOffsetSetting;
 	float hudScaleSetting;
 	float menuScaleSetting;
-	float zoomOutLevel;
 	// input
 	float oldPosX;
 	float oldPosY;
@@ -83,13 +79,9 @@ void cameraInitialize() {
 void swapGraphicPackDataEndianness(graphicPackData* data) {
 	swapEndianness(data->viewMode);
 	swapEndianness(data->firstPersonCameraMovement);
-	swapEndianness(data->swappedFlipSideSetting);
-	swapEndianness(data->eyeSeparation);
 	swapEndianness(data->headPositionSensitivitySetting);
-	swapEndianness(data->heightPositionOffsetSetting);
 	swapEndianness(data->hudScaleSetting);
 	swapEndianness(data->menuScaleSetting);
-	swapEndianness(data->zoomOutLevel);
 	swapEndianness(data->oldPosX);
 	swapEndianness(data->oldPosY);
 	swapEndianness(data->oldPosZ);
@@ -251,18 +243,6 @@ void cameraHookUpdate(PPCInterpreter_t* hCPU) {
 
 float cameraGetMenuZoom() {
 	return cameraGetGraphicPackSettings().menuScaleSetting;
-}
-
-bool cameraUseSwappedFlipMode() {
-	return cameraGetGraphicPackSettings().swappedFlipSideSetting == 1;
-}
-
-float cameraGetEyeSeparation() {
-	return cameraGetGraphicPackSettings().eyeSeparation;
-}
-
-float cameraGetZoomOutLevel() {
-	return cameraGetGraphicPackSettings().zoomOutLevel;
 }
 
 bool cameraIsInGame() {
