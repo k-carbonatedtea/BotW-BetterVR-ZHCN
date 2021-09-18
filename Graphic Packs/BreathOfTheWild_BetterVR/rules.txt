@@ -6,21 +6,14 @@ description = You will want to enable this to use BetterVR. For a better experie
 version = 7
 
 [Default]
+; VR Variables
 $mode:int = 0
-$FOV = 0.872665
-$cameraDistance = 0.1
 $firstPersonCameraMovement:int = 0
 $linkOpacity = 1.0
 $hudScale = 0.4
 $menuScale = 0.4
-$swappedFlipSide = 0
-$eyeSeparationSetting = 0.067000
 $zoomOutLevelSetting = 5.0
-
-; This changes how much moving your headset moves the in-game camera
 $headPositionSensitivity = 1.0
-; This value gets subtracted from the camera height to make the camera look smaller
-$heightPositionOffset = 0.0
 
 # Mode selector
 
@@ -29,13 +22,12 @@ name = First-Person (Default)
 category = Camera Mode
 $mode:int = 1
 $linkOpacity = 0.0
-$cameraDistance = 0.01
 default = 1
 
 [Preset]
 name = Third-Person
-$mode:int = 0
 category = Camera Mode
+$mode:int = 0
 
 # Whether or not to allow the user to walk around
 

@@ -9,20 +9,12 @@ ViewMode:
 .int $mode
 FirstPersonCameraMovement:
 .int $firstPersonCameraMovement
-SwappedFlipSideSetting:
-.int $swappedFlipSide
-EyeSeparationSetting:
-.float $eyeSeparationSetting
 HeadPositionSensitivitySetting:
 .float $headPositionSensitivity
-HeightPositionOffsetSetting:
-.float $heightPositionOffset
 HUDScaleSetting:
 .float $hudScale
 MenuScaleSetting:
 .float $menuScale
-ZoomOutLevelSetting:
-.float $zoomOutLevelSetting
 
 oldPosX: ; Input for the calculations done in the Vulkan layer
 .float 0.0
@@ -174,4 +166,3 @@ b import.coreinit.cameraHookInterface
 0x0386D024 = continueFromChangeAspectRatio:
 
 0x101BF8DC = .float $linkOpacity
-0x10216594 = .float $cameraDistance

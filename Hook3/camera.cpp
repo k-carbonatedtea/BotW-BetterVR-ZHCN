@@ -195,26 +195,24 @@ void cameraHookUpdate(PPCInterpreter_t* hCPU) {
 	}
 	else
 	{
-		inputData.newPosX = inputData.oldPosX + (hmdPos.x * inputData.headPositionSensitivitySetting) - (hmdPos.x - eyePos.x);
-		inputData.newPosY = inputData.oldPosY + (hmdPos.y * inputData.headPositionSensitivitySetting) - (hmdPos.y - eyePos.y);
-		inputData.newPosZ = inputData.oldPosZ + (hmdPos.z * inputData.headPositionSensitivitySetting) - (hmdPos.z - eyePos.z);
+		inputData.newPosX = inputData.oldPosX + hmdPos.x * inputData.headPositionSensitivitySetting;
+		inputData.newPosY = inputData.oldPosY + hmdPos.y * inputData.headPositionSensitivitySetting;
+		inputData.newPosZ = inputData.oldPosZ + hmdPos.z * inputData.headPositionSensitivitySetting;
 	}
+
+	inputData.newPosX -= (hmdPos.x - eyePos.x);
+	inputData.newPosY -= (hmdPos.y - eyePos.y);
+	inputData.newPosZ -= (hmdPos.z - eyePos.z);
 
 	if (inputData.firstPersonCameraMovement)
 	{
-		inputData.newPosX -= (hmdPos.x - eyePos.x);
-		inputData.newPosX += hmdPos.x; // factor in
-		inputData.newPosY -= (hmdPos.y - eyePos.y);
-		inputData.newPosY += hmdPos.y; // every single
-		inputData.newPosZ -= (hmdPos.z - eyePos.z);
-		inputData.newPosZ += hmdPos.z; // coord value
+		inputData.newPosX += hmdPos.x;
+		inputData.newPosY += hmdPos.y;
+		inputData.newPosZ += hmdPos.z;
 	}
 	else
 	{
-		inputData.newPosX -= (hmdPos.x - eyePos.x);
-		inputData.newPosY -= (hmdPos.y - eyePos.y);
-		inputData.newPosY += 1.3f; // link's height
-		inputData.newPosZ -= (hmdPos.z - eyePos.z);
+		inputData.newPosY += inputData.viewMode == 1 ? 1.3f : 0.0f;
 	}
 
 	inputData.newTargetX = inputData.newPosX + ((combinedMatrix[2][0] * -1.0f) * originalCameraDistance);
