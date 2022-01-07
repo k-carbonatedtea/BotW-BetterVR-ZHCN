@@ -556,7 +556,7 @@ void dx11RenderLayer(ID3D11Texture2D* swapchainTargetTexture, sideTextureResourc
 	renderData.renderHeight = (float)sideTexture->height;
 	renderData.swapchainWidth = (float)xrSwapchainSize.extent.width;
 	renderData.swapchainHeight = (float)xrSwapchainSize.extent.height;
-	renderData.eyeSeparation = glm::distance(leftEyePos, rightEyePos) / cameraGetZoomOutLevel();
+	renderData.eyeSeparation = glm::distance(leftEyePos, rightEyePos);
 	renderData.showWholeScreen = !sideBySideRenderingMode;
 	renderData.showSingleScreen = (float)!cameraIsInGame();
 	renderData.singleScreenScale = cameraGetMenuZoom();

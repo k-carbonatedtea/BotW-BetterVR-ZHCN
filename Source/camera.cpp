@@ -12,6 +12,7 @@ struct graphicPackData {
 	float headPositionSensitivitySetting;
 	float hudScaleSetting;
 	float menuScaleSetting;
+	float zoomOutLevelSetting;
 	// input
 	float oldPosX;
 	float oldPosY;
@@ -241,6 +242,10 @@ void cameraHookUpdate(PPCInterpreter_t* hCPU) {
 
 float cameraGetMenuZoom() {
 	return cameraGetGraphicPackSettings().menuScaleSetting;
+}
+
+float cameraGetZoomOutLevel() {
+	return cameraGetGraphicPackSettings().zoomOutLevelSetting;
 }
 
 bool cameraIsInGame() {

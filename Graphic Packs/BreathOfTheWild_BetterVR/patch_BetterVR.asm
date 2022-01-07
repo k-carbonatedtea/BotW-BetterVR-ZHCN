@@ -15,6 +15,8 @@ HUDScaleSetting:
 .float $hudScale
 MenuScaleSetting:
 .float $menuScale
+ZoomOutLevelSetting:
+.float $zoomOutLevel
 
 oldPosX: ; Input for the calculations done in the Vulkan layer
 .float 0.0

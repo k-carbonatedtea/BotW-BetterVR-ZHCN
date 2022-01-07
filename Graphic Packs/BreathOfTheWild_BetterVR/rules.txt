@@ -12,7 +12,7 @@ $firstPersonCameraMovement:int = 0
 $linkOpacity = 1.0
 $hudScale = 0.4
 $menuScale = 0.4
-$zoomOutLevelSetting = 5.0
+$zoomOutLevel = 5.0
 $headPositionSensitivity = 1.0
 
 # Mode selector
