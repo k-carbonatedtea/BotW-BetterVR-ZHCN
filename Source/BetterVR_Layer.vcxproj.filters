@@ -47,6 +47,9 @@
     <ClCompile Include="steamvr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ovr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="BetterVR_Layer.json">

@@ -104,6 +104,7 @@
     <ClCompile Include="logging.cpp" />
     <ClCompile Include="cemu.cpp" />
     <ClCompile Include="openxr.cpp" />
+    <ClCompile Include="ovr.cpp" />
     <ClCompile Include="rendering.cpp" />
     <ClCompile Include="steamvr.cpp" />
   </ItemGroup>
