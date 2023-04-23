@@ -58,16 +58,16 @@ void Texture::d3d12TransitionLayout(ID3D12GraphicsCommandList* cmdList, D3D12_RE
         .Transition = {
             .pResource = m_d3d12Texture.Get(),
             .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-            .StateBefore = D3D12_RESOURCE_STATE_COMMON,
+            .StateBefore = m_currState,
             .StateAfter = state
         }
     };
     // clang-format on
+    m_currState = state;
     cmdList->ResourceBarrier(1, &barrier);
 }
 
 bool Texture::CopyFromSharedTexture(ID3D12GraphicsCommandList* cmdList, SharedTexture* texture) {
-
     return false;
 }
 

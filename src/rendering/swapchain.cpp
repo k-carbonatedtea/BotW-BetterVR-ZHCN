@@ -46,9 +46,10 @@ Swapchain::Swapchain(uint32_t width, uint32_t height, uint32_t sampleCount): m_w
     checkHResult(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator)), "Failed to create command allocator!");
     {
         RND_D3D12::CommandContext<true> formatSwapchains(device, queue, allocator.Get(), [this, &swapchainImages](ID3D12GraphicsCommandList* cmdList) {
-            for (XrSwapchainImageD3D12KHR& image : swapchainImages) {
+            for (size_t i=0; i<swapchainImages.size(); i++) {
                 // D3D12Utils::CreateConstantBuffer(D3D12_HEAP_TYPE_DEFAULT);
-                m_swapchainTextures.emplace_back(image.texture);
+                swapchainImages[i].texture->SetName(std::format(L"Swapchain Image {}", i).c_str());
+                m_swapchainTextures.emplace_back(swapchainImages[i].texture);
             }
         });
     }

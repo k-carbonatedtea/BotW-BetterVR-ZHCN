@@ -17,6 +17,7 @@ public:
 protected:
     HANDLE m_d3d12TextureHandle = nullptr;
     ComPtr<ID3D12Resource> m_d3d12Texture;
+    D3D12_RESOURCE_STATES m_currState = D3D12_RESOURCE_STATE_COMMON;
 
     HANDLE m_d3d12FenceHandle = nullptr;
     ComPtr<ID3D12Fence> m_d3d12Fence;
