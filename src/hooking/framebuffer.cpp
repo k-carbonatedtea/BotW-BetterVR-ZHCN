@@ -180,10 +180,10 @@ VkResult VkDeviceOverrides::QueueSubmit(const vkroots::VkDeviceDispatch* pDispat
             const_cast<VkTimelineSemaphoreSubmitInfo*>(timelineSemaphoreSubmitInfoPtr)->pSignalSemaphoreValues = modifiedSubmitInfo.timelineSignalValues.data();
 
             // add wait and signal semaphores to the submit info
-            const_cast<VkSubmitInfo&>(submitInfo).waitSemaphoreCount = modifiedSubmitInfo.waitSemaphores.size();
+            const_cast<VkSubmitInfo&>(submitInfo).waitSemaphoreCount = (uint32_t)modifiedSubmitInfo.waitSemaphores.size();
             const_cast<VkSubmitInfo&>(submitInfo).pWaitSemaphores = modifiedSubmitInfo.waitSemaphores.data();
             const_cast<VkSubmitInfo&>(submitInfo).pWaitDstStageMask = modifiedSubmitInfo.waitDstStageMasks.data();
-            const_cast<VkSubmitInfo&>(submitInfo).signalSemaphoreCount = modifiedSubmitInfo.signalSemaphores.size();
+            const_cast<VkSubmitInfo&>(submitInfo).signalSemaphoreCount = (uint32_t)modifiedSubmitInfo.signalSemaphores.size();
             const_cast<VkSubmitInfo&>(submitInfo).pSignalSemaphores = modifiedSubmitInfo.signalSemaphores.data();
         }
 
