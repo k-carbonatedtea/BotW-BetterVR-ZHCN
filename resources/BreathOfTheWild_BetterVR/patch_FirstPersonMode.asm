@@ -29,6 +29,9 @@ blr
 
 0x024ae2b4 = bla conditionalSetWeaponOpacityJump
 
+; disables more SetWeaponOpacity calls
+0x02D55084 = .int ((($cameraMode == 0) * 0x4B751A55) + (($cameraMode == 1) * 0x60000000))
+
 ; disables the transition effect when an object goes out of view/near the camera
 ; 0x4182003C = beq 0x02D53130
 ; 0x60000000 = nop
