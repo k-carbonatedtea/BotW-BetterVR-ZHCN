@@ -80,4 +80,4 @@ mtctr r12
 ;beqctr ; call original function
 bctr
 
-0x02D5B888 = bla hook_updateInputsInActorJob
+;0x02D5B888 = bla hook_updateInputsInActorJob

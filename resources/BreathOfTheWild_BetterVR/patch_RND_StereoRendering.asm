@@ -6,7 +6,7 @@ moduleMatches = 0x6267BFD0
 ; ==================================================================================
 ; How Stereo Rendering is implemented in this file:
 ; - custom_sead_GameFramework_procFrame is modified to ran all the render & update steps twice, one for each eye. It changes currentEyeSide to 0 or 1 depending on the eye side.
-; - custom_GameScene_calcAndRunStateMachine and hook_sead_MethodTreeNode_callRec filter the code & calls that would change the game state when currentEyeSide is 1.
+; - custom_GameScene_calcAndRunStateMachine, hook_sead_MethodTreeNode_callRec and actor jobs functions (see patch_StereoRendering_ActorJobs.asm) filter the code & calls that would change the game state when currentEyeSide is 1.
 ;   - one major issue that the Actor::update() is also filtered, but Actor::update() is also responsible for requesting a draw and adding themselves into the gsys::ModelSceneContext. However, Actor::update() also requests the actor to be drawn, which
 ; - preventUnrequestingDraw and preventModelQueueClear are used to prevent the game from clearing the model queue at the start of the right eye rendering. This way they're still rendered despite the Actor::update() being filtered.
 ; - agl__lyr__Layer__getRenderCamera and agl__lyr__Layer__getRenderProjection are hooked to modify the draw calls for the left and right eye. The modifified camera and projection matrix data is computed by combining from OpenXR and the game's camera
@@ -578,7 +578,6 @@ blr
 
 ; ==================================================================================
 ; ==================================================================================
-;0x03AEA94C = agl__lyr__RenderInfo__RenderInfo_returnAddr:
 
 const_0:
 .float 0.0
