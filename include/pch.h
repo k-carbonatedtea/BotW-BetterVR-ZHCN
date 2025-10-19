@@ -279,7 +279,7 @@ struct BEMatrix34 : BETypeCompatible {
 
     BEMatrix34() = default;
 
-    float DistanceSq(BEMatrix34 other) const {
+    float DistanceSq(const BEMatrix34& other) const {
         return (pos_x.getLE() - other.pos_x.getLE()) * (pos_x.getLE() - other.pos_x.getLE()) + (pos_y.getLE() - other.pos_y.getLE()) * (pos_y.getLE() - other.pos_y.getLE()) + (pos_z.getLE() - other.pos_z.getLE()) * (pos_z.getLE() - other.pos_z.getLE());
     }
 
@@ -331,7 +331,7 @@ struct BEMatrix34 : BETypeCompatible {
         ));
     }
 
-	void setRotLE(glm::fquat rotation) {
+	void setRotLE(const glm::fquat& rotation) {
         glm::fmat3 rotMat = glm::mat3_cast(rotation);
 
         x_x = rotMat[0][0];
@@ -343,21 +343,6 @@ struct BEMatrix34 : BETypeCompatible {
         x_z = rotMat[2][0];
         y_z = rotMat[2][1];
         z_z = rotMat[2][2];
-    }
-
-    void setLE(std::array<std::array<float, 4>, 3> mtx) {
-        x_x = mtx[0][0];
-        y_x = mtx[0][1];
-        z_x = mtx[0][2];
-        pos_x = mtx[0][3];
-        x_y = mtx[1][0];
-        y_y = mtx[1][1];
-        z_y = mtx[1][2];
-        pos_y = mtx[1][3];
-        x_z = mtx[2][0];
-        y_z = mtx[2][1];
-        z_z = mtx[2][2];
-        pos_z = mtx[2][3];
     }
 };
 
@@ -446,6 +431,14 @@ struct data_VRSettingsIn {
 
     bool ShowDebugOverlay() const {
         return enableDebugOverlay.getLE() != 0;
+    }
+
+    float GetZNear() const {
+        return 0.1f;
+    }
+
+    float GetZFar() const {
+        return 25000.0f;
     }
 
     enum class AngularVelocityFixerMode {

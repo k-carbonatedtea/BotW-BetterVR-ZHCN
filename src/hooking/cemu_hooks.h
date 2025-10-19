@@ -51,6 +51,8 @@ public:
 
         osLib_registerHLEFunction("coreinit", "hook_XRRumble_VPADControlMotor", &hook_XRRumble_VPADControlMotor);
         osLib_registerHLEFunction("coreinit", "hook_XRRumble_VPADStopMotor", &hook_XRRumble_VPADStopMotor);
+
+        osLib_registerHLEFunction("coreinit", "hook_GetEventName", &hook_GetEventName);
     };
     ~CemuHooks() {
         FreeLibrary(m_cemuHandle);
@@ -116,6 +118,8 @@ private:
 
     static void hook_XRRumble_VPADControlMotor(PPCInterpreter_t* hCPU);
     static void hook_XRRumble_VPADStopMotor(PPCInterpreter_t* hCPU);
+
+    static void hook_GetEventName(PPCInterpreter_t* hCPU);
 
 public:
     template <typename T>

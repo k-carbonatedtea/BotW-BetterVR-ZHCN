@@ -109,7 +109,7 @@ blr
 ;; store CameraKeep (no right-stick controls at all! Might not follow player?)
 ;;0x02BD55AC = bla cameraFinder
 ;; store CameraTail (seems to fix pivot anchor issues and forward looking camera?!)
-0x02BEB244 = bla cameraFinder
+;0x02BEB244 = bla cameraFinder
 ;; store CameraRevolve
 ;;0x02BE443C = bla cameraFinder
 ;; store CameraAbyss (prevents all rotational camera, but follows player)
@@ -139,4 +139,4 @@ lwz r3, cameraFinder@l(r3)
 mr r31, r3
 blr
 
-0x02B8FCA4 = bla useCameraFinder
+;0x02B8FCA4 = bla useCameraFinder

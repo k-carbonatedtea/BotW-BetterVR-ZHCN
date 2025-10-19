@@ -29,6 +29,25 @@ EnableDebugOverlaySetting:
 BuggyAngularVelocitySetting:
 .int $buggyAngularVelocity
 
+
+
+eventName:
+.int 0
+.int 0
+.int 0
+.int 0
+
+entryPointName:
+.int 0
+.int 0
+.int 0
+.int 0
+
+0x1046D3AC = EventMgr__sInstance:
+
+0x031CA1C0 = EventMgr__getActiveEventName:
+
+
 vr_updateSettings:
 mflr r0
 stwu r1, -0x20(r1)
@@ -37,10 +56,67 @@ stw r3, 0x1C(r1)
 stw r4, 0x18(r1)
 stw r5, 0x14(r1)
 stw r6, 0x10(r1)
+stw r7, 0x0C(r1)
+stw r8, 0x08(r1)
 
 lis r5, data_settingsOffset@ha
 addi r5, r5, data_settingsOffset@l
 bl import.coreinit.hook_UpdateSettings
+
+; get event and entrypoint strings
+lis r3, EventMgr__sInstance@ha
+lwz r3, EventMgr__sInstance@l(r3)
+cmpwi r3, 0
+beq skipGetEventName
+
+; get active event name
+lis r3, EventMgr__sInstance@ha
+lwz r3, EventMgr__sInstance@l(r3)
+addis r3, r3, 1
+lwz r3, 0x75B0(r3)
+; EventMgr::sInstance->activeEventContext
+cmpwi r3, 0
+beq noActiveEvent
+
+; r3 = EventMgr::sInstance->activeEventContext
+
+; load active event name
+lwz r4, 0x18C(r3) ; load index to event indices
+addi r8, r3, 0x184 ; load array start
+cmplwi r4, 8 ;.int 0x28040008 ;cmplwi r4, 8 ; .long 0x28040008
+lwz r6, 4(r3)
+bge loc_31D8C8C
+add r8, r8, r4
+
+loc_31D8C8C:
+; r4 is unused from here
+li r4, 0
+li r7, 0
+; -------------------------
+
+lbz r5, 0(r8)
+extsb r5, r5 ; .int 0x7CA50774 ; extsb r5, r5
+cmplw r5, r6
+li r4, 0
+bge loc_31D8CAC
+lwz r7, 0x0C(r3)
+slwi r8, r5, 2
+lwzx r4, r8, r7
+
+loc_31D8CAC:
+lwz r4, 8(r4)
+li r3, 1
+bla import.coreinit.hook_GetEventName
+b skipGetEventName
+;lis r3, EventMgr__sInstance@ha
+;lwz r3, EventMgr__sInstance@l(r3)
+;bctrl
+
+noActiveEvent:
+li r3, 0
+bla import.coreinit.hook_GetEventName
+
+skipGetEventName:
 
 ; spawn check
 li r3, 0
@@ -52,7 +128,8 @@ notSpawnActor:
 
 ;bl checkIfDropWeapon
 
-
+lwz r8, 0x08(r1)
+lwz r7, 0x0C(r1)
 lwz r6, 0x10(r1)
 lwz r5, 0x14(r1)
 lwz r4, 0x18(r1)

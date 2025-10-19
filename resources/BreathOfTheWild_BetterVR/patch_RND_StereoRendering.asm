@@ -665,7 +665,7 @@ modifiedCopy_seadPerspectiveProjection:
 .float 0 ; deviceZScale
 .float 0 ; deviceZOffset
 .int 0x1027B54C ; vtable
-.float 0 ; near
+.float 0.1 ; near
 .float 25000 ; far
 .float 0.8726647 ; angle
 .float 0.4226183 ; fovySin

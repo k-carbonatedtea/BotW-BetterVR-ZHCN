@@ -250,7 +250,6 @@ void CemuHooks::hook_EnableWeaponAttackSensor(PPCInterpreter_t* hCPU) {
         return;
     }
 
-
     m_motionAnalyzers[heldIndex].ResetIfWeaponTypeChanged(weaponType);
     m_motionAnalyzers[heldIndex].Update(state.inGame.poseLocation[heldIndex], state.inGame.poseVelocity[heldIndex], headset.value(), state.inGame.inputTime);
 

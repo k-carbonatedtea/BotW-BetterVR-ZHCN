@@ -67,7 +67,7 @@ public:
         bool IsRendering() { return m_copiedColor; }
         SharedTexture* CopyColorToLayer(VkCommandBuffer copyCmdBuffer, VkImage image);
         bool HasCopied() const { return m_copiedColor; };
-        void StartRendering();
+        void StartRendering() const;
         void Render();
         std::vector<XrCompositionLayerQuad> FinishRendering(XrTime predictedDisplayTime);
 

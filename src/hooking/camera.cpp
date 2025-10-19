@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "cemu_hooks.h"
 #include "rendering/openxr.h"
-#include "../instance.h"
+#include "instance.h"
 
 
 void CemuHooks::hook_BeginCameraSide(PPCInterpreter_t* hCPU) {
@@ -124,7 +124,7 @@ void CemuHooks::hook_CameraRotationControl(PPCInterpreter_t* hCPU) {
 }
 
 
-std::pair<glm::quat, glm::quat> swingTwistY(const glm::quat& q) {
+static std::pair<glm::quat, glm::quat> swingTwistY(const glm::quat& q) {
     glm::vec3 yAxis(0, 1, 0);
     // Project rotation axis onto Y to get twist
     glm::vec3 r(q.x, q.y, q.z);
@@ -133,7 +133,7 @@ std::pair<glm::quat, glm::quat> swingTwistY(const glm::quat& q) {
     glm::quat twist = glm::normalize(glm::quat(q.w, proj.x, proj.y, proj.z));
     glm::quat swing = q * glm::conjugate(twist);
     return { swing, twist };
-};
+}
 
 
 glm::fquat CemuHooks::s_cameraRotation = {};
@@ -212,7 +212,7 @@ constexpr uint32_t seadPerspectiveProjection = 0x1027B54C;
 // https://github.com/KhronosGroup/OpenXR-SDK/blob/858912260ca616f4c23f7fb61c89228c353eb124/src/common/xr_linear.h#L564C1-L632C2
 // https://github.com/aboood40091/sead/blob/45b629fb032d88b828600a1b787729f2d398f19d/engine/library/modules/src/gfx/seadProjection.cpp#L166
 
-data_VRProjectionMatrixOut calculateFOVAndOffset(XrFovf viewFOV) {
+static data_VRProjectionMatrixOut calculateFOVAndOffset(XrFovf viewFOV) {
     float totalHorizontalFov = viewFOV.angleRight - viewFOV.angleLeft;
     float totalVerticalFov = viewFOV.angleUp - viewFOV.angleDown;
 
@@ -266,6 +266,9 @@ void CemuHooks::hook_GetRenderProjection(PPCInterpreter_t* hCPU) {
     if (perspectiveProjection.zFar == 10000.0f) {
         return;
     }
+
+    perspectiveProjection.zFar = GetSettings().GetZFar();
+    perspectiveProjection.zNear = GetSettings().GetZNear();
 
     // Log::print("Render Proj. (LR: {:08X}): {}", hCPU->sprNew.LR, perspectiveProjection);
     // Log::print("[PPC] Getting render projection for {} side", side == OpenXR::EyeSide::LEFT ? "left" : "right");
@@ -491,5 +494,21 @@ void CemuHooks::hook_SetActorOpacity(PPCInterpreter_t* hCPU) {
         uint8_t opacityOrDoFlushOpacityToGPU = 1;
         writeMemoryBE(actorPtr + offsetof(ActorWiiU, modelOpacity), &toBeSetOpacity);
         writeMemoryBE(actorPtr + offsetof(ActorWiiU, opacityOrDoFlushOpacityToGPU), &opacityOrDoFlushOpacityToGPU);
+    }
+}
+
+void CemuHooks::hook_GetEventName(PPCInterpreter_t* hCPU) {
+    hCPU->instructionPointer = hCPU->sprNew.LR;
+
+    uint32_t isEventActive = hCPU->gpr[3];
+    if (isEventActive) {
+        uint32_t stringPtr = getMemory<uint32_t>(hCPU->gpr[4]).getLE();
+        const char* eventNamePtr = (const char*)(hCPU->gpr[4] + s_memoryBaseAddress);
+        Log::print("!! Event name {} from {:08X}", eventNamePtr, hCPU->gpr[4]);
+        // shrine going down is Demo008_2
+        // camera zoom when opening door is Demo024_0
+    }
+    else {
+        //Log::print("!! There's no active event");
     }
 }

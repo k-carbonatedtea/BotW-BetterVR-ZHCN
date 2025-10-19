@@ -68,7 +68,7 @@ struct std::formatter<glm::fmat3> : std::formatter<string> {
 template <>
 struct std::formatter<glm::fmat4> : std::formatter<string> {
     auto format(const glm::fmat4 mtx, std::format_context& ctx) const {
-        return std::format_to(ctx.out(), "row0: [{:.1f}, {:.1f}, {:.1f}, {:.1f}] row1: [{:.1f}, {:.1f}, {:.1f}, {:.1f}] row2: [{:.1f}, {:.1f}, {:.1f}, {:.1f}] row3: [{:.1f}, {:.1f}, {:.1f}, {:.1f}]",
+        return std::format_to(ctx.out(), "row0: [{:.3f}, {:.3f}, {:.3f}, {:.3f}] row1: [{:.3f}, {:.3f}, {:.3f}, {:.3f}] row2: [{:.3f}, {:.3f}, {:.3f}, {:.3f}] row3: [{:.3f}, {:.3f}, {:.3f}, {:.3f}]",
             mtx[0][0], mtx[0][1], mtx[0][2], mtx[0][3],
             mtx[1][0], mtx[1][1], mtx[1][2], mtx[1][3],
             mtx[2][0], mtx[2][1], mtx[2][2], mtx[2][3],

@@ -254,10 +254,10 @@ const std::array<XrCompositionLayerProjectionView, 2>& RND_Renderer::Layer3D::Fi
                 }
             },
         },
-        .minDepth = -1.0f,
+        .minDepth = 0.0f,
         .maxDepth = 1.0f,
-        .nearZ = 1.0f,
-        .farZ = 25000.0f,
+        .nearZ = CemuHooks::GetSettings().GetZNear(),
+        .farZ = CemuHooks::GetSettings().GetZFar(),
     };
     m_projectionViews[OpenXR::EyeSide::RIGHT] = {
         .type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW,
@@ -287,10 +287,10 @@ const std::array<XrCompositionLayerProjectionView, 2>& RND_Renderer::Layer3D::Fi
                 }
             },
         },
-        .minDepth = -1.0f,
+        .minDepth = 0.0f,
         .maxDepth = 1.0f,
-        .nearZ = 1.0f,
-        .farZ = 25000.0f,
+        .nearZ = CemuHooks::GetSettings().GetZNear(),
+        .farZ = CemuHooks::GetSettings().GetZFar(),
     };
     // clang-format on
     return m_projectionViews;
@@ -336,7 +336,7 @@ SharedTexture* RND_Renderer::Layer2D::CopyColorToLayer(VkCommandBuffer copyCmdBu
     return m_texture.get();
 }
 
-void RND_Renderer::Layer2D::StartRendering() {
+void RND_Renderer::Layer2D::StartRendering() const {
     m_swapchain->StartRendering();
 }
 
