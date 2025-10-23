@@ -397,12 +397,15 @@ void CemuHooks::hook_ModifyBoneMatrix(PPCInterpreter_t* hCPU) {
         //Log::print("!! Bone index #{} ({}) for model {}", boneIdx, boneName, modelName.getLE());
     }
 
+    // todo: check if Link's armor is filtered out due to this check
     if (modelName.getLE() != "GameROMPlayer") {
         return;
     }
 
+
     char* boneNamePtrChar = (char*)(s_memoryBaseAddress + boneNamePtr);
     std::string_view boneName(boneNamePtrChar);
+    //Log::print("!! Scale = {} for {}", scale.getLE(), boneName);
 
     bool leftOrRightSide = boneName.ends_with("_L");
 
@@ -411,6 +414,8 @@ void CemuHooks::hook_ModifyBoneMatrix(PPCInterpreter_t* hCPU) {
 
     glm::fvec3 controllerPos = glm::fvec3(0.0f);
     glm::fquat controllerQuat = glm::identity<glm::fquat>();
+    glm::fvec3 relativeControllerPos = glm::fvec3(0.0f);
+    glm::fquat relativeControllerQuat = glm::identity<glm::fquat>();
     if (inputs.inGame.in_game && inputs.inGame.pose[side].isActive) {
         auto& handPose = inputs.inGame.poseLocation[side];
 
@@ -420,6 +425,15 @@ void CemuHooks::hook_ModifyBoneMatrix(PPCInterpreter_t* hCPU) {
         if (handPose.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) {
             controllerQuat = ToGLM(handPose.pose.orientation);
         }
+
+        auto& relativeHandPose = inputs.inGame.hmdRelativePoseLocation[side];
+
+        if (handPose.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) {
+            relativeControllerPos = ToGLM(relativeHandPose.pose.position);
+        }
+        if (handPose.locationFlags & XR_SPACE_LOCATION_ORIENTATION_VALID_BIT) {
+            relativeControllerQuat = ToGLM(relativeHandPose.pose.orientation);
+        }
     }
 
     static glm::fquat debug_rotatingAngles = glm::identity<glm::fquat>();
@@ -427,8 +441,8 @@ void CemuHooks::hook_ModifyBoneMatrix(PPCInterpreter_t* hCPU) {
 
     static glm::fvec3 debug_movingPositions = glm::fvec3();
     static bool isMovingUp = true;
-    glm::fvec3 moveAxis = glm::fvec3(0.0f, 0.0f, 0.5f);
-    float speedOverSecond = 1.0f / 60.0f;
+    glm::fvec3 moveAxis = glm::fvec3(0.5f, 0.0f, 0.0f);
+    float speedOverSecond = 1.0f / 240.0f;
 
     glm::fvec3 dir = glm::normalize(moveAxis);
     float step = speedOverSecond * glm::length(moveAxis);
@@ -449,7 +463,7 @@ void CemuHooks::hook_ModifyBoneMatrix(PPCInterpreter_t* hCPU) {
         }
     }
 
-    debug_movingPositions = glm::fvec3(0, 1, 0);
+    //debug_movingPositions = glm::fvec3(0, 1, 0);
 
 
     if (boneName == "Root") {
@@ -460,30 +474,34 @@ void CemuHooks::hook_ModifyBoneMatrix(PPCInterpreter_t* hCPU) {
         matrix.setPos(glm::fvec3());
         matrix.setRotLE(glm::identity<glm::fquat>());
 
-        matrix.setPos(glm::fvec3(0.0f, 0.99426f, 0.0f));
+        //matrix.setPos(glm::fvec3(0.0f, 0.99426f, 0.0f));
     }
     else if (boneName.starts_with("Spine_1")) {
         matrix.setPos(glm::fvec3());
         matrix.setRotLE(glm::identity<glm::fquat>());
-        matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-90.0f), glm::fvec3(1, 0, 0)));
-        matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-90.0f), glm::fvec3(0, 0, 1)));
+        //matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-90.0f), glm::fvec3(0, 0, 1)));
+        //matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-90.0f), glm::fvec3(1, 0, 0)));
+        //matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-90.0f), glm::fvec3(0, 0, 1)));
     }
     else if (boneName.starts_with("Spine_2")) {
         matrix.setPos(glm::fvec3());
         matrix.setRotLE(glm::identity<glm::fquat>());
 
-        matrix.setPos(glm::fvec3(0.13600f, 0.0f, 0.0f));
+        //matrix.setPos(glm::fvec3(0.13600f, 0.0f, 0.0f));
     }
     else if (boneName == "Neck") {
         //matrix.setPos(glm::fvec3(0.26326f, 0.0f, 0.0f));
-        matrix.setPos(glm::fvec3(-0.46326f, 0.0f, 0.0f));
+
+        // fixme: properly hide his head instead of just putting it way below.
+        //matrix.setPos(glm::fvec3(-0.46326f, 0.0f, 0.0f));
+        matrix.setPos(glm::fvec3());
         matrix.setRotLE(glm::identity<glm::fquat>());
     }
     else if (boneName == "Head") {
         matrix.setPos(glm::fvec3());
         matrix.setRotLE(glm::identity<glm::fquat>());
 
-        matrix.setPos(glm::fvec3(0.12447f, 0.0f, 0.0f));
+        //matrix.setPos(glm::fvec3(0.12447f, 0.0f, 0.0f));
     }
     else if (boneName.starts_with("Clavicle_Assist")) {
         matrix.setPos(glm::fvec3());
@@ -492,17 +510,6 @@ void CemuHooks::hook_ModifyBoneMatrix(PPCInterpreter_t* hCPU) {
     else if (boneName.starts_with("Clavicle")) {
         matrix.setPos(glm::fvec3());
         matrix.setRotLE(glm::identity<glm::fquat>());
-
-        if (leftOrRightSide) {
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(270.0f), glm::fvec3(1, 0, 0)));
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-180.0f), glm::fvec3(0, 0, 1)));
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-90.0f), glm::fvec3(0, 1, 0)));
-        }
-        else {
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(270.0f), glm::fvec3(1, 0, 0)));
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-180.0f), glm::fvec3(0, 0, 1)));
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-90.0f), glm::fvec3(0, 1, 0)));
-        }
     }
     else if (boneName.starts_with("Arm_1_Assist")) {
         matrix.setPos(glm::fvec3());
@@ -523,61 +530,78 @@ void CemuHooks::hook_ModifyBoneMatrix(PPCInterpreter_t* hCPU) {
     else if (boneName.starts_with("Arm_2")) {
         matrix.setPos(glm::fvec3());
         matrix.setRotLE(glm::identity<glm::fquat>());
+
+        // add player height that we've removed above
+        //matrix.setPos(matrix.getPos().getLE() - glm::fvec3(0.0f, 0.99426f + 0.13600f, 0.0f));
     }
     else if (boneName.starts_with("Wrist")) {
         matrix.setRotLE(glm::identity<glm::fquat>());
+        matrix.setPos(glm::fvec3());
 
+        // player model orientation in world space
+        BEMatrix34 bePlayerMtx = getMemory<BEMatrix34>(s_playerMtxAddress);
+        glm::mat4x3 playerMtx = bePlayerMtx.getLEMatrix(); // world-space
+        glm::mat4 playerMtx4 = glm::mat4(playerMtx);       // promote to 4×4
+        glm::mat4 playerPos = glm::translate(glm::identity<glm::fmat4>(), glm::fvec3(playerMtx[3]));
+        glm::mat4 playerRot = glm::mat4_cast(glm::quat_cast(playerMtx4));
+
+        BEMatrix34 mtx = {};
+        readMemory(s_playerMtxAddress, &mtx);
+
+        glm::fquat handCorrectionQuat = glm::identity<glm::fquat>();
+        // todo: what's the correct hand holding offset here? angle between grip and pointing pose?
         if (leftOrRightSide) {
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-90.0f), glm::fvec3(0, 1, 0)));
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-180.0f), glm::fvec3(0, 0, 1)));
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-180.0f), glm::fvec3(1, 0, 0)));
+            handCorrectionQuat *= glm::angleAxis(glm::radians(90.0f), glm::fvec3(0, 1, 0));
+            handCorrectionQuat *= glm::angleAxis(glm::radians(-45.0f), glm::fvec3(0, 0, 1));
+            handCorrectionQuat *= glm::angleAxis(glm::radians(-45.0f), glm::fvec3(1, 0, 0));
+            handCorrectionQuat *= glm::angleAxis(glm::radians(45.0f), glm::fvec3(1, 0, 0));
         }
         else {
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(90.0f), glm::fvec3(0, 1, 0)));
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-180.0f), glm::fvec3(0, 0, 1)));
-            matrix.setRotLE(matrix.getRotLE() * glm::angleAxis(glm::radians(-180.0f), glm::fvec3(0, 1, 0)));
+            handCorrectionQuat *= glm::angleAxis(glm::radians(-90.0f), glm::fvec3(0, 0, 1));
+            handCorrectionQuat *= glm::angleAxis(glm::radians(-180.0f), glm::fvec3(0, 1, 0));
+            handCorrectionQuat *= glm::angleAxis(glm::radians(270.0f), glm::fvec3(1, 0, 0));
         }
+        glm::fmat4 handCorrections = glm::mat4_cast(handCorrectionQuat);
 
-        // rotate with controller. However it has to be inversed I think?
-        auto inversedAxisControllerQuat = controllerQuat;
 
-        glm::fvec3 cameraRotation = glm::eulerAngles(glm::inverse(CemuHooks::s_forwardRotation));
+        // calculate the inverse offset from the Weapon_L/Weapon_R bones, since the XR pose is meant to be at that position, and this function only is able to access the parent wrist bone
+        // Weapon_L: 0.10690f 0.00002f 0.02769f, rotation = euler(1.57080f, 0.0f, 3.14159f)
+        // Weapon_R: -0,10690 -0,00002 -0,02769, rotation = euler(1.57080f, 0.0f, 0.0f)
+        // todo: double-check rotation of VR controller in hands before release; quick check
+        glm::fvec3 weaponPositionOffset = leftOrRightSide ? glm::fvec3(0.10690f, 0.00002f, 0.02769f) : glm::fvec3(-0.10690, -0.00002, -0.02769f);
+        glm::fvec3 weaponRotationOffset = leftOrRightSide ? glm::fvec3(1.57080f, 0.0f, 3.14159f) : glm::fvec3(1.57080f, 0.0f, 0.0f);
+        weaponPositionOffset *= -1.0f;
+        glm::fmat4 weaponOffsetMtx = glm::translate(glm::identity<glm::fmat4>(), weaponPositionOffset); // * glm::toMat4(glm::quat(weaponRotationOffset));
 
-        // put a minus on the pitch axis
-        glm::fvec3 eulerAnglesController = glm::eulerAngles(inversedAxisControllerQuat);
-        eulerAnglesController.x = -eulerAnglesController.x;
-        eulerAnglesController.y += (cameraRotation.x >= 3.0f ? cameraRotation.y : -cameraRotation.y+glm::radians(180.0f));
-        eulerAnglesController.z = -eulerAnglesController.z;
-        inversedAxisControllerQuat = glm::fquat(eulerAnglesController);
+        // turn the controller pose into a matrix
+        glm::fmat4 vrTransformationMatrix = glm::translate(glm::identity<glm::fmat4>(), controllerPos);
+        glm::fmat4 vrRotationMatrix = glm::mat4_cast(controllerQuat);
+        glm::fmat4 controllerInLocalSpace = vrTransformationMatrix * vrRotationMatrix * handCorrections;
 
-        // todo: what's the correct hand holding offset here?
-        inversedAxisControllerQuat = inversedAxisControllerQuat * glm::angleAxis(glm::radians(70.0f), glm::fvec3(1, 0, 0));
+        // camera matrix from the game
+        // todo: this might cause the camera to be behind a frame, so find a better way to get the camera matrix
+        //BEMatrix34 beCameraMtx = {};
+        //readMemory(s_cameraMtxAddress, &mtx);
+        glm::mat4 cameraMtx = s_lastCameraMtx;
+        glm::mat4 cameraPositionOnlyMtx = glm::translate(glm::identity<glm::fmat4>(), glm::fvec3(cameraMtx[3]));
+        glm::fquat cameraQuat = glm::quat_cast(cameraMtx);
+        glm::mat4 cameraRotationOnlyMtx = glm::mat4_cast(cameraQuat);
 
-        auto neutralRotation = matrix.getRotLE();
-        neutralRotation *= glm::inverse(inversedAxisControllerQuat);
+        // calculate the weapon matrix
+        glm::mat4 controllerInWorld = cameraRotationOnlyMtx * controllerInLocalSpace * weaponOffsetMtx;
 
-        matrix.setRotLE(neutralRotation);
+        glm::fmat4 controllerRelativeToPlayerModel = playerPos * controllerInWorld;
 
-        // ----------------------------------------------------------------------------------------
-        glm::fvec3 rotatedControllerPos = controllerPos * glm::inverse(CemuHooks::s_forwardRotation);
+        glm::fmat4x3 truncatedFinalMtx = glm::mat4x3(glm::inverse(playerMtx4) * controllerRelativeToPlayerModel);
 
-        if (leftOrRightSide) {
-            rotatedControllerPos -= glm::fvec3(-0.02769f, 0.00002f, 0.10690f);
-        }
-        else {
-            rotatedControllerPos -= glm::fvec3(0.02769f, 0.00002f, 0.10690f);
-        }
-
-        rotatedControllerPos -= glm::fvec3(0.0f, 0.99426f + 0.13600f, 0.0f);
-
-        matrix.setPos(rotatedControllerPos);
+        matrix.setLEMatrix(truncatedFinalMtx);
     }
 
     writeMemory(matrixPtr, &matrix);
 }
 
 void CemuHooks::hook_ModifyModelBoneMatrix(PPCInterpreter_t* hCPU) {
-    // we replaced a bctr instruction, and this is the replacement basically
+    // the function jump replaced a bctr instruction so use CTR instead of LR
     hCPU->instructionPointer = hCPU->sprNew.CTR;
 
     uint32_t modelUnitPtr = hCPU->gpr[3]; // not 100% sure, but likely

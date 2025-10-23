@@ -65,6 +65,8 @@ public:
             std::array<XrActionStatePose, 2> pose;
             std::array<XrSpaceLocation, 2> poseLocation;
             std::array<XrSpaceVelocity, 2> poseVelocity;
+            // todo: remove relative controller positions if it turns out to be unnecessary
+            std::array<XrSpaceLocation, 2> hmdRelativePoseLocation;
         } inGame;
         struct InMenu {
             bool in_game = false;
