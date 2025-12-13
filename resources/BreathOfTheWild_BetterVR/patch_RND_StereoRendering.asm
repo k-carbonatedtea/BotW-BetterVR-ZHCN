@@ -24,6 +24,35 @@ currentEyeSide:
 0x031FAF00 = calculateUIMaybe:
 0x031FA97C = jumpToFPSPlusPlus:
 
+
+; sead::GameFrameworkCafe::presentAndDrawDone outputs the frame to the regular screen. We only need that for the right eye.
+; this is a simplified version for the left eye, that does enough to keep the game happy but doesn't actually present anything.
+simplified_sead_GameFrameworkCafe_presentAndDrawDone:
+mflr r0
+stwu r1, -0x10(r1)
+stw r0, 0x14(r1)
+stw r3, 0x0C(r1)
+stw r4, 0x08(r1)
+
+; check if drawdone callback is registered
+lwz r4, 0x370(r3)
+cmpwi r4, 0
+beq exit_simplified_sead_GameFrameworkCafe_presentAndDrawDone
+
+bla import.gx2.GX2Flush
+lwz r7, 0x370(r31)
+mtctr r7
+li r3, 1
+bctrl ; gsys__SystemTask__waitDrawDoneCallback_ptr(1)
+
+exit_simplified_sead_GameFrameworkCafe_presentAndDrawDone:
+lwz r3, 0x0C(r1)
+lwz r4, 0x08(r1)
+lwz r0, 0x14(r1)
+addi r1, r1, 0x10
+mtlr r0
+blr
+
 custom_sead_GameFramework_procFrame:
 mflr r0
 stwu r1, -0x10(r1)
@@ -61,7 +90,7 @@ mtctr r0
 mr r3, r30
 bctrl ; sead__GameFrameworkCafe__procDraw
 
-; todo: see if we can get rid of this command
+; doesn't seem to be necessary
 ;bl import.gx2.GX2DrawDone
 
 li r0, 0
@@ -92,7 +121,8 @@ lwz r12, 0(r30)
 lwz r12, 0x10C(r12)
 mtctr r12
 mr r3, r30
-bctrl ; sead__GameFrameworkCafe__presentAndDrawDone
+bl simplified_sead_GameFrameworkCafe_presentAndDrawDone
+;bctrl ; sead__GameFrameworkCafe__presentAndDrawDone
 
 ; ========================================================================
 ; SECOND EYE SIDE
@@ -104,8 +134,8 @@ mtctr r0
 mr r3, r30
 bctrl ; sead__GameFrameworkCafe__procDraw
 
-; todo: find a way on how to combine this with the original loop so that we don't do it four times
-bl import.gx2.GX2DrawDone
+; note: doesn't seem to be necessary
+;bl import.gx2.GX2DrawDone
 
 li r3, 0
 bl import.coreinit.hook_EndCameraSide

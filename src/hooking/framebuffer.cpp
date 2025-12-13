@@ -99,6 +99,7 @@ void VkDeviceOverrides::CmdClearColorImage(const vkroots::VkDeviceDispatch* pDis
                 lockImageResolutions.unlock();
             }
 
+            // don't clear the image if we're in the faux 2D mode
             if (CemuHooks::UseBlackBarsDuringEvents()) {
                 return;
             }
