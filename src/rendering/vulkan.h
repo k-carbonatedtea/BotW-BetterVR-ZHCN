@@ -36,10 +36,12 @@ public:
         std::array<std::unique_ptr<VulkanFramebuffer>, 2> m_framebuffers;
         VkSampler m_sampler = VK_NULL_HANDLE;
         std::unique_ptr<VulkanTexture> m_mainFramebuffer;
-        VkDescriptorSet m_mainFramebufferDescriptorSet = VK_NULL_HANDLE;
+        VkDescriptorSet m_mainFramebufferDS = VK_NULL_HANDLE;
         float m_mainFramebufferAspectRatio = 1.0f;
         std::unique_ptr<VulkanTexture> m_hudFramebuffer;
-        VkDescriptorSet m_hudFramebufferDescriptorSet = VK_NULL_HANDLE;
+        std::unique_ptr<VulkanTexture> m_hudWithoutAlphaFramebuffer;
+        VkDescriptorSet m_hudFramebufferDS = VK_NULL_HANDLE;
+        VkDescriptorSet m_hudWithoutAlphaFramebufferDS = VK_NULL_HANDLE;
         uint32_t m_framebufferIdx = 0;
     };
 

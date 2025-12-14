@@ -70,7 +70,7 @@ void BaseVulkanTexture::vkCopyFromImage(VkCommandBuffer cmdBuffer, VkImage srcIm
     dispatch->CmdCopyImage(cmdBuffer, srcImage, m_vkCurrLayout, m_vkImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-VulkanTexture::VulkanTexture(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage): BaseVulkanTexture(width, height, format) {
+VulkanTexture::VulkanTexture(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, bool disableAlphaThroughSwizzling): BaseVulkanTexture(width, height, format) {
     const auto* dispatch = VRManager::instance().VK->GetDeviceDispatch();
 
     VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -113,7 +113,7 @@ VulkanTexture::VulkanTexture(uint32_t width, uint32_t height, VkFormat format, V
         .r = VK_COMPONENT_SWIZZLE_IDENTITY,
         .g = VK_COMPONENT_SWIZZLE_IDENTITY,
         .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-        .a = VK_COMPONENT_SWIZZLE_IDENTITY
+        .a = disableAlphaThroughSwizzling ? VK_COMPONENT_SWIZZLE_ONE : VK_COMPONENT_SWIZZLE_IDENTITY
     };
     imageViewCreateInfo.subresourceRange = {
         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

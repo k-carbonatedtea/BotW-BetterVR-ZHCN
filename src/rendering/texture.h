@@ -30,7 +30,9 @@ private:
 class VulkanTexture : public BaseVulkanTexture {
     friend class VulkanFramebuffer;
 public:
-    VulkanTexture(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage);
+    VulkanTexture(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, bool disableAlphaThroughSwizzling);
+    VulkanTexture(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage): VulkanTexture(width, height, format, usage, false) {
+    }
     ~VulkanTexture() override;
 
     VkImageView GetImageView() const { return m_vkImageView; }

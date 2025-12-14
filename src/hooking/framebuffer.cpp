@@ -114,7 +114,12 @@ void VkDeviceOverrides::CmdClearColorImage(const vkroots::VkDeviceDispatch* pDis
 
             if (image != s_curr3DColorImage) {
                 Log::print<RENDERING>("Color image is not the same as the current 3D color image! ({} != {})", (void*)image, (void*)s_curr3DColorImage);
-                const_cast<VkClearColorValue*>(pColor)[0] = { 0.0f, 0.0f, 0.0f, 0.0f };
+                if (VRManager::instance().XR->GetRenderer()->IsRendering3D()) {
+                    const_cast<VkClearColorValue*>(pColor)[0] = { 0.0f, 0.0f, 0.0f, 0.0f };
+                }
+                else {
+                    const_cast<VkClearColorValue*>(pColor)[0] = { 0.0f, 0.0f, 0.0f, 1.0f };
+                }
                 return pDispatch->CmdClearColorImage(commandBuffer, image, imageLayout, pColor, rangeCount, pRanges);
             }
 
