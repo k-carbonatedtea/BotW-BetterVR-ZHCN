@@ -56,6 +56,8 @@ void CemuHooks::hook_UpdateActorList(PPCInterpreter_t* hCPU) {
          s_playerPos = mtx.getPos().getLE();
          s_playerMtxAddress = actorMtxPtr;
          s_playerAddress = hCPU->gpr[6];
+         //uint32_t vtableAddr = getMemory<BEType<uint32_t>>(hCPU->gpr[6] + offsetof(ActorWiiU, vtable)).getLE();
+         //Log::print<INFO>("VTABLE = {:08X}", vtableAddr);
      }
      else if (strcmp(actorName, "GameRomCamera") == 0) {
          uint32_t actorMtxPtr = hCPU->gpr[6] + offsetof(ActorWiiU, mtx);

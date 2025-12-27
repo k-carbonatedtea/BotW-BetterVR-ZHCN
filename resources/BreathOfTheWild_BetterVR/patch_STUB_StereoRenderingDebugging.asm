@@ -7,7 +7,7 @@ useStubHooks:
 .int 0
 
 const_cameraHeightChange:
-.float 23
+.float 0.5
 
 stub_hook_GetRenderCamera:
 ;blr

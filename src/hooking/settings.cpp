@@ -56,3 +56,85 @@ void CemuHooks::hook_OSReportToConsole(PPCInterpreter_t* hCPU) {
         Log::print<PPC>(str);
     }
 }
+
+constexpr uint32_t playerVtable = 0x101E5FFC;
+void CemuHooks::hook_RouteActorJob(PPCInterpreter_t* hCPU) {
+    hCPU->instructionPointer = hCPU->sprNew.LR;
+
+    uint32_t actorPtr = hCPU->gpr[3];
+    uint32_t jobName = hCPU->gpr[4];
+    uint32_t side = hCPU->gpr[5]; // 0 = left, 1 = right
+
+    std::string jobNameStr = std::string((char*)(s_memoryBaseAddress + jobName));
+
+    ActorWiiU actor;
+    readMemory(actorPtr, &actor);
+    std::string actorName = actor.name.getLE();
+
+#define SKIP_ON_LEFT_SIDE if (side == 0) { hCPU->gpr[3] = 1; }
+#define SKIP_ON_RIGHT_SIDE if (side == 1) { hCPU->gpr[3] = 1; }
+#define USE_ALTERED_PATH_ON_LEFT_SIDE if (side == 0) { hCPU->gpr[3] = 2; }
+#define USE_ALTERED_PATH_ON_RIGHT_SIDE if (side == 1) { hCPU->gpr[3] = 2; }
+
+    hCPU->gpr[3] = 0;
+    if (actorName == "GameROMPlayer") {
+        if (jobNameStr == "job0_1") {
+            USE_ALTERED_PATH_ON_LEFT_SIDE
+        }
+        else if (jobNameStr == "job0_2") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job1_1") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job1_2") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job2_1_ragdoll_related") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job2_2") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job4") {
+            SKIP_ON_RIGHT_SIDE
+        }
+    }
+    else {
+        if (jobNameStr == "job0_1") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job0_2") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job1_1") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job1_2") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job2_1_ragdoll_related") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job2_2") {
+            SKIP_ON_RIGHT_SIDE
+        }
+        else if (jobNameStr == "job4") {
+            SKIP_ON_RIGHT_SIDE
+        }
+    }
+
+    if (hCPU->gpr[3] == 0) {
+        //Log::print<INFO>("[{}] Ran {}", actorName, jobNameStr);
+    }
+    else if (hCPU->gpr[3] == 2) {
+        //Log::print<INFO>("[{}] Ran ALTERED VERSION of {}", actorName, jobNameStr);
+    }
+
+
+
+    // exit r3:
+    // 1 = skip job
+    // 0 = perform job
+    // 2 = altered job
+}

@@ -3,6 +3,142 @@ moduleMatches = 0x6267BFD0
 
 .origin = codecave
 
+
+
+
+
+0x037A6EC4 = real_actor_job1_1:
+0x101E5FFC = Player_vtable:
+
+;0x0335AD78 = nop
+;0x0335AD70 = nop
+;0x0335AD38 = nop
+;0x037A71B4 = nop
+
+custom_left_version_player:
+mflr r0
+stwu r1, -0x20(r1)
+stw r0, 0x24(r1)
+stw r3, 0x08(r1)
+stw r10, 0x0C(r1)
+stw r11, 0x10(r1)
+
+; check if actor has LODState
+lwz r3, 0x08(r1) ; reload actor pointer
+lwz r10, 0x3B0(r3)
+cmpwi r10, 0
+bne skipLODStateCheck ; if it has an LOD state, skip
+
+; check if player vtable is present
+lwz r3, 0x08(r1) ; reload actor pointer
+lwz r11, 0xE8(r3) ; load vtable of Actor
+lis r10, Player_vtable@ha
+addi r10, r10, Player_vtable@l
+cmpw r10, r11
+bne skipLODStateCheck
+
+; call Player::m_70_updatePosition_maybe_fallHandleMaybe
+lwz r3, 0x08(r1) ; reload actor pointer
+lwz r10, 0xE8(r3)
+lwz r11, 0x23C(r10)
+mtctr r11
+bctrl ; Player::m_70_updatePosition_maybe_fallHandleMaybe
+
+skipLODStateCheck:
+lwz r11, 0x10(r1)
+lwz r10, 0x0C(r1)
+lwz r3, 0x08(r1)
+lwz r0, 0x24(r1)
+addi r1, r1, 0x20
+mtlr r0
+blr
+
+
+custom_right_version_other:
+mflr r0
+stwu r1, -0x20(r1)
+stw r0, 0x24(r1)
+stw r3, 0x08(r1)
+stw r10, 0x0C(r1)
+stw r11, 0x10(r1)
+
+; check if actor has LODState
+lwz r3, 0x08(r1) ; reload actor pointer
+lwz r10, 0x3B0(r3)
+cmpwi r10, 0
+bne exit_custom_right_version_other ; if it has an LOD state, skip
+
+; check if player vtable is present
+lwz r3, 0x08(r1) ; reload actor pointer
+lwz r11, 0xE8(r3) ; load vtable of Actor
+lis r10, Player_vtable@ha
+addi r10, r10, Player_vtable@l
+cmpw r10, r11
+beq exit_custom_right_version_other
+
+lwz r3, 0x08(r1) ; reload actor pointer
+lwz r10, 0xE8(r3)
+lwz r11, 0x23C(r10)
+mtctr r11
+bctrl ; Actor::m_70_updatePositionSomething
+
+exit_custom_right_version_other:
+lwz r11, 0x10(r1)
+lwz r10, 0x0C(r1)
+lwz r3, 0x08(r1)
+lwz r0, 0x24(r1)
+addi r1, r1, 0x20
+mtlr r0
+blr
+
+;0x037A71B4 = mr r11, r30
+;0x037A71A8 = mr r3, r31
+;0x037A71AC = mflr r10
+;0x037A71B0 = bla custom_right_version_other
+;0x037A71B4 = mtlr r10
+
+
+
+
+
+
+
+; r3 = format string
+; r4 = actor pointer
+logActorJob:
+mflr r0
+stwu r1, -0x20(r1)
+stw r0, 0x24(r1)
+stw r3, 0x1C(r1)
+stw r4, 0x18(r1)
+stw r5, 0x14(r1)
+stw r6, 0x10(r1)
+stw r7, 0x0C(r1)
+
+lis r3, printToCemuConsoleWithFormat@ha
+addi r3, r3, printToCemuConsoleWithFormat@l
+mtctr r3
+
+
+lwz r4, 0x08(r3)
+
+mr r5, r3
+mr r6, r4
+
+bctrl ; bl printToCemuConsoleWithFormat
+
+exit_logActorJob:
+lwz r6, 0x10(r1)
+lwz r5, 0x14(r1)
+lwz r4, 0x18(r1)
+lwz r3, 0x1C(r1)
+lwz r0, 0x24(r1)
+addi r1, r1, 0x20
+mtlr r0
+blr
+
+
+
 ; timeout for skipping job pushes
 ; normally the game skips job pushes by setting this counter to 2
 ; however, in stereo rendering this code is executed twice per frame (once per eye)
@@ -212,52 +348,170 @@ blr
 
 ; ======================================================
 
-0x0313EC98 = ksys__map__ObjectLinkArray__checkLink:
+;;;; 0x0313EC98 = ksys__map__ObjectLinkArray__checkLink:
+;;;; 
+;;;; custom_actor_checkSignal:
+;;;; ;bla import.coreinit.log_actorCheckSignal
+;;;; lwz r12, 0x4FC(r3)
+;;;; cmpwi r12, 0
+;;;; beq loc_379F1F4
+;;;; lwz r0, 0x28(r12)
+;;;; cmpwi r0, 0
+;;;; bne loc_379F1FC
+;;;; 
+;;;; loc_379F1F4:
+;;;; li r3, 0
+;;;; blr
+;;;; 
+;;;; loc_379F1FC:
+;;;; lwz r12, 0x28(r12)
+;;;; li r5, 0
+;;;; lis r3, ksys__map__ObjectLinkArray__checkLink@ha
+;;;; addi r3, r3, ksys__map__ObjectLinkArray__checkLink@l
+;;;; mtctr r3
+;;;; addi r3, r12, 0x20
+;;;; bctr ; b ksys__map__ObjectLinkArray__checkLink
+;;;; blr
 
-custom_actor_checkSignal:
-;bla import.coreinit.log_actorCheckSignal
-lwz r12, 0x4FC(r3)
-cmpwi r12, 0
-beq loc_379F1F4
-lwz r0, 0x28(r12)
-cmpwi r0, 0
-bne loc_379F1FC
 
-loc_379F1F4:
+custom_player_m_81_getCalcTiming:
+lis r3, currentEyeSide@ha
+lwz r3, currentEyeSide@l(r3)
+cmpwi r3, 1
+li r3, 999
+beqlr ; if right eye, return 9999999
 li r3, 0
 blr
 
-loc_379F1FC:
-lwz r12, 0x28(r12)
-li r5, 0
-lis r3, ksys__map__ObjectLinkArray__checkLink@ha
-addi r3, r3, ksys__map__ObjectLinkArray__checkLink@l
-mtctr r3
-addi r3, r12, 0x20
-bctr ; b ksys__map__ObjectLinkArray__checkLink
+;0x02D794C4 = ba custom_player_m_81_getCalcTiming
+
+
+playerNormal:
+.int 0
+
+storePlayerNormal:
+lis r3, playerNormal@ha
+stw r31, playerNormal@l(r3)
+mr r3, r31
 blr
+
+0x02D0A168 = bla storePlayerNormal
+
+
+hook_updatePlayerNormalStateForClimbing:
+lis r25, currentEyeSide@ha
+lwz r25, currentEyeSide@l(r25)
+cmpwi r25, 1
+beq .+0x08 ; skip if right eye
+li r3, 0
+
+
+cmpwi r3, 0
+blr
+
+
+;0x02D149E0 = ba hook_updatePlayerNormalStateForClimbing
 
 ; ======================================================
 ; ======================================================
 ; ======================================================
+
+setClimbingState:
+;li r25, 2
+lbz r25, 0x16E8(r30)
+stb r25, 0x16E8(r30)
+blr
+0x02D5C67C = bla setClimbingState
+
+scopedDeltaSetter_float2:
+.float 1.0
+.float 0.0
 
 0x037A5DB0 = real_actor_job0_1:
+0x037A5080 = actor_job_common_calcAI_andMore:
+
+0x02D149A0 = updatePlayerNormalStateForClimbing:
+
+strActor_job0_1:
+.string "job0_1"
 
 hook_actor_job0_1:
-mr r0, r3
+mflr r0
+stwu r1, -0x20(r1)
+stw r0, 0x24(r1)
+stw r3, 0x1C(r1)
+stw r4, 0x18(r1)
+stw r5, 0x14(r1)
+stw r6, 0x10(r1)
 
-lis r3, currentEyeSide@ha
-lwz r3, currentEyeSide@l(r3)
+lwz r3, 0x1C(r1)
+lis r4, strActor_job0_1@ha
+addi r4, r4, strActor_job0_1@l
+lis r5, currentEyeSide@ha
+lwz r5, currentEyeSide@l(r5)
+bl import.coreinit.hook_RouteActorJob
+
 cmpwi r3, 0
-bne .+0x0C ; don't early return if left eye
-mr r3, r0
-blr
+beq job0_1_normal
+cmpwi r3, 1
+beq finish_hook_actor_job0_1
+cmpwi r3, 2
+beq job0_1_altered
 
-lis r3, real_actor_job0_1@ha
-addi r3, r3, real_actor_job0_1@l
+job0_1_normal:
+lis r4, real_actor_job0_1@ha
+addi r4, r4, real_actor_job0_1@l
+mtctr r4
+lwz r3, 0x1C(r1)
+bctrl ; ba real_actor_job0_1
+b finish_hook_actor_job0_1
+
+job0_1_altered:
+; set climbing state
+lwz r3, 0x1C(r1)
+li r4, 0
+stb r4, 0x16E8(r3)
+
+; FOR PLAYER ALONE, run actor update HP
+lwz r3, 0x1C(r1)
+lwz r3, 0xE8(r3) ; load vtable of Actor
+lwz r3, 0x264(r3) ; load updateHP function pointer
 mtctr r3
-mr r3, r0
-bctr ; ba real_actor_job0_1
+lis r4, scopedDeltaSetter_float2@ha
+addi r4, r4, scopedDeltaSetter_float2@l
+lwz r3, 0x1C(r1)
+bctrl ; ba updateHP
+
+
+lis r4, updatePlayerNormalStateForClimbing@ha
+addi r4, r4, updatePlayerNormalStateForClimbing@l
+mtctr r4
+lis r3, playerNormal@ha
+lwz r3, playerNormal@l(r3)
+bctrl ; ba updatePlayerNormalStateForClimbing
+
+;    ; FOR PLAYER ALONE, run on the common calcAI_andMore on the LEFT EYE too.
+;    lis r4, actor_job_common_calcAI_andMore@ha
+;    addi r4, r4, actor_job_common_calcAI_andMore@l
+;    mtctr r4
+;    lwz r3, 0x1C(r1)
+;    bctrl ; ba actor_job_common_calcAI_andMore
+
+;lis r4, real_actor_job0_1@ha
+;addi r4, r4, real_actor_job0_1@l
+;mtctr r4
+;lwz r3, 0x1C(r1)
+;bctrl ; ba real_actor_job0_1
+b finish_hook_actor_job0_1
+
+finish_hook_actor_job0_1:
+lwz r6, 0x10(r1)
+lwz r5, 0x14(r1)
+lwz r4, 0x18(r1)
+lwz r3, 0x1C(r1)
+lwz r0, 0x24(r1)
+addi r1, r1, 0x20
+mtlr r0
 blr
 
 0x03795750 = lis r27, hook_actor_job0_1@ha
@@ -267,21 +521,42 @@ blr
 
 0x037A7D3C = real_actor_job0_2:
 
-hook_actor_job0_2:
-mr r0, r3
+strActor_job0_2:
+.string "job0_2"
 
-lis r3, currentEyeSide@ha
-lwz r3, currentEyeSide@l(r3)
+hook_actor_job0_2:
+mflr r0
+stwu r1, -0x20(r1)
+stw r0, 0x24(r1)
+stw r3, 0x1C(r1)
+stw r4, 0x18(r1)
+stw r5, 0x14(r1)
+stw r6, 0x10(r1)
+
+lwz r3, 0x1C(r1)
+lis r4, strActor_job0_2@ha
+addi r4, r4, strActor_job0_2@l
+lis r5, currentEyeSide@ha
+lwz r5, currentEyeSide@l(r5)
+bl import.coreinit.hook_RouteActorJob
+
 cmpwi r3, 1
-bne .+0x0C ; don't early return if left eye
-mr r3, r0
-blr
+beq finish_hook_actor_job0_2
 
 lis r3, real_actor_job0_2@ha
 addi r3, r3, real_actor_job0_2@l
 mtctr r3
-mr r3, r0
-bctr ; ba real_actor_job0_2
+lwz r3, 0x1C(r1)
+bctrl ; ba real_actor_job0_2
+
+finish_hook_actor_job0_2:
+lwz r6, 0x10(r1)
+lwz r5, 0x14(r1)
+lwz r4, 0x18(r1)
+lwz r3, 0x1C(r1)
+lwz r0, 0x24(r1)
+addi r1, r1, 0x20
+mtlr r0
 blr
 
 0x0379575C = lis r25, hook_actor_job0_2@ha
@@ -289,47 +564,88 @@ blr
 
 ; ======================================================
 
-0x037A6EC4 = real_actor_job1_1:
+strActor_job1_1:
+.string "job1_1"
 
 hook_actor_job1_1:
-mr r0, r3
+mflr r0
+stwu r1, -0x20(r1)
+stw r0, 0x24(r1)
+stw r3, 0x1C(r1)
+stw r4, 0x18(r1)
+stw r5, 0x14(r1)
+stw r6, 0x10(r1)
 
-lis r3, currentEyeSide@ha
-lwz r3, currentEyeSide@l(r3)
+lwz r3, 0x1C(r1)
+lis r4, strActor_job1_1@ha
+addi r4, r4, strActor_job1_1@l
+lis r5, currentEyeSide@ha
+lwz r5, currentEyeSide@l(r5)
+bl import.coreinit.hook_RouteActorJob
+
 cmpwi r3, 1
-bne .+0x0C ; don't early return if left eye
-mr r3, r0
-blr
+beq finish_hook_actor_job1_1
 
 lis r3, real_actor_job1_1@ha
 addi r3, r3, real_actor_job1_1@l
 mtctr r3
-mr r3, r0
-bctr ; ba real_actor_job1_1
+lwz r3, 0x1C(r1)
+bctrl ; ba real_actor_job1_1
+
+finish_hook_actor_job1_1:
+lwz r6, 0x10(r1)
+lwz r5, 0x14(r1)
+lwz r4, 0x18(r1)
+lwz r3, 0x1C(r1)
+lwz r0, 0x24(r1)
+addi r1, r1, 0x20
+mtlr r0
 blr
 
 0x03795834 = lis r25, hook_actor_job1_1@ha
 0x03795840 = addi r25, r25, hook_actor_job1_1@l
 
+
 ; ======================================================
 
 0x037A7CB8 = real_actor_job1_2:
 
-hook_actor_job1_2:
-mr r0, r3
+strActor_job1_2:
+.string "job1_2"
 
-lis r3, currentEyeSide@ha
-lwz r3, currentEyeSide@l(r3)
+hook_actor_job1_2:
+mflr r0
+stwu r1, -0x20(r1)
+stw r0, 0x24(r1)
+stw r3, 0x1C(r1)
+stw r4, 0x18(r1)
+stw r5, 0x14(r1)
+stw r6, 0x10(r1)
+
+lwz r3, 0x1C(r1)
+lis r4, strActor_job1_2@ha
+addi r4, r4, strActor_job1_2@l
+lis r5, currentEyeSide@ha
+lwz r5, currentEyeSide@l(r5)
+bl import.coreinit.hook_RouteActorJob
+
 cmpwi r3, 1
-bne .+0x0C ; don't early return if left eye
-mr r3, r0
-blr
+beq finish_hook_actor_job1_2
 
 lis r3, real_actor_job1_2@ha
 addi r3, r3, real_actor_job1_2@l
 mtctr r3
-mr r3, r0
-bctr ; ba real_actor_job1_2
+lwz r3, 0x1C(r1)
+bctrl ; ba real_actor_job1_2
+
+finish_hook_actor_job1_2:
+lwz r6, 0x10(r1)
+lwz r5, 0x14(r1)
+lwz r4, 0x18(r1)
+lwz r3, 0x1C(r1)
+lwz r0, 0x24(r1)
+addi r1, r1, 0x20
+mtlr r0
 blr
 
 0x03795844 = lis r20, hook_actor_job1_2@ha
@@ -339,21 +655,42 @@ blr
 
 0x037A7438 = real_actor_job2_1_ragdoll_related:
 
-hook_actor_job2_1_ragdoll_related:
-mr r0, r3
+strActor_job2_1:
+.string "job2_1_ragdoll_related"
 
-lis r3, currentEyeSide@ha
-lwz r3, currentEyeSide@l(r3)
+hook_actor_job2_1_ragdoll_related:
+mflr r0
+stwu r1, -0x20(r1)
+stw r0, 0x24(r1)
+stw r3, 0x1C(r1)
+stw r4, 0x18(r1)
+stw r5, 0x14(r1)
+stw r6, 0x10(r1)
+
+lwz r3, 0x1C(r1)
+lis r4, strActor_job2_1@ha
+addi r4, r4, strActor_job2_1@l
+lis r5, currentEyeSide@ha
+lwz r5, currentEyeSide@l(r5)
+bl import.coreinit.hook_RouteActorJob
+
 cmpwi r3, 1
-bne .+0x0C ; don't early return if left eye
-mr r3, r0
-blr
+beq finish_hook_actor_job2_1
 
 lis r3, real_actor_job2_1_ragdoll_related@ha
 addi r3, r3, real_actor_job2_1_ragdoll_related@l
 mtctr r3
-mr r3, r0
-bctr ; ba real_actor_job2_1_ragdoll_related
+lwz r3, 0x1C(r1)
+bctrl ; ba real_actor_job2_1_ragdoll_related
+
+finish_hook_actor_job2_1:
+lwz r6, 0x10(r1)
+lwz r5, 0x14(r1)
+lwz r4, 0x18(r1)
+lwz r3, 0x1C(r1)
+lwz r0, 0x24(r1)
+addi r1, r1, 0x20
+mtlr r0
 blr
 
 0x037958F8 = lis r20, hook_actor_job2_1_ragdoll_related@ha
@@ -363,16 +700,42 @@ blr
 
 0x037A7E30 = real_actor_job2_2:
 
-hook_actor_job2_2:
-lis r12, currentEyeSide@ha
-lwz r12, currentEyeSide@l(r12)
-cmpwi r12, 1
-beqlr
+strActor_job2_2:
+.string "job2_2"
 
-lis r12, real_actor_job2_2@ha
-addi r12, r12, real_actor_job2_2@l
-mtctr r12
-bctr ; ba real_actor_job2_2
+hook_actor_job2_2:
+mflr r0
+stwu r1, -0x20(r1)
+stw r0, 0x24(r1)
+stw r3, 0x1C(r1)
+stw r4, 0x18(r1)
+stw r5, 0x14(r1)
+stw r6, 0x10(r1)
+
+lwz r3, 0x1C(r1)
+lis r4, strActor_job2_2@ha
+addi r4, r4, strActor_job2_2@l
+lis r5, currentEyeSide@ha
+lwz r5, currentEyeSide@l(r5)
+bl import.coreinit.hook_RouteActorJob
+
+cmpwi r3, 1
+beq finish_hook_actor_job2_2
+
+lis r3, real_actor_job2_2@ha
+addi r3, r3, real_actor_job2_2@l
+mtctr r3
+lwz r3, 0x1C(r1)
+bctrl ; ba real_actor_job2_2
+
+finish_hook_actor_job2_2:
+lwz r6, 0x10(r1)
+lwz r5, 0x14(r1)
+lwz r4, 0x18(r1)
+lwz r3, 0x1C(r1)
+lwz r0, 0x24(r1)
+addi r1, r1, 0x20
+mtlr r0
 blr
 
 0x03795908 = lis r19, hook_actor_job2_2@ha
@@ -382,21 +745,42 @@ blr
 
 0x037A7C00 = real_actor_job4:
 
-hook_actor_job4:
-mr r0, r3
+strActor_job4:
+.string "job4"
 
-lis r3, currentEyeSide@ha
-lwz r3, currentEyeSide@l(r3)
+hook_actor_job4:
+mflr r0
+stwu r1, -0x20(r1)
+stw r0, 0x24(r1)
+stw r3, 0x1C(r1)
+stw r4, 0x18(r1)
+stw r5, 0x14(r1)
+stw r6, 0x10(r1)
+
+lwz r3, 0x1C(r1)
+lis r4, strActor_job4@ha
+addi r4, r4, strActor_job4@l
+lis r5, currentEyeSide@ha
+lwz r5, currentEyeSide@l(r5)
+bl import.coreinit.hook_RouteActorJob
+
 cmpwi r3, 1
-bne .+0x0C ; don't early return if left eye
-mr r3, r0
-blr
+beq finish_hook_actor_job4
 
 lis r3, real_actor_job4@ha
 addi r3, r3, real_actor_job4@l
 mtctr r3
-mr r3, r0
-bctr ; ba real_actor_job4
+lwz r3, 0x1C(r1)
+bctrl ; ba real_actor_job4
+
+finish_hook_actor_job4:
+lwz r6, 0x10(r1)
+lwz r5, 0x14(r1)
+lwz r4, 0x18(r1)
+lwz r3, 0x1C(r1)
+lwz r0, 0x24(r1)
+addi r1, r1, 0x20
+mtlr r0
 blr
 
 0x037959C0 = lis r21, hook_actor_job4@ha

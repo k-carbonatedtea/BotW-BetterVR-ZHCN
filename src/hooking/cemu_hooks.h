@@ -62,6 +62,7 @@ public:
         osLib_registerHLEFunction("coreinit", "hook_DropWeaponLogging", &hook_DropWeaponLogging);
         osLib_registerHLEFunction("coreinit", "hook_ModifyHandModelAccessSearch", &hook_ModifyHandModelAccessSearch);
         osLib_registerHLEFunction("coreinit", "hook_CreateNewScreen", &hook_CreateNewScreen);
+        osLib_registerHLEFunction("coreinit", "hook_RouteActorJob", &hook_RouteActorJob);
     };
     ~CemuHooks() {
         FreeLibrary(m_cemuHandle);
@@ -224,6 +225,7 @@ private:
     static void hook_DropWeaponLogging(PPCInterpreter_t* hCPU);
     static void hook_ModifyHandModelAccessSearch(PPCInterpreter_t* hCPU);
     static void hook_CreateNewScreen(PPCInterpreter_t* hCPU);
+    static void hook_RouteActorJob(PPCInterpreter_t* hCPU);
 
 public:
     template <typename T>

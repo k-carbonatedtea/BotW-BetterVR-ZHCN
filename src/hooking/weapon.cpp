@@ -332,9 +332,9 @@ void CemuHooks::hook_EnableWeaponAttackSensor(PPCInterpreter_t* hCPU) {
         //weapon.setupAttackSensor.overrideImpact = 1;
         //weapon.setupAttackSensor.impact = 2312;
         //weapon.setupAttackSensor.multiplier = 20.0f;
-        // weapon.setupAttackSensor.overrideImpact = 1;
-        // weapon.setupAttackSensor.multiplier = analyzer->GetDamage();
-        // weapon.setupAttackSensor.impact = analyzer->GetImpulse();
+        //weapon.setupAttackSensor.overrideImpact = 1;
+        //weapon.setupAttackSensor.multiplier = analyzer->GetDamage();
+        //weapon.setupAttackSensor.impact = analyzer->GetImpulse();
 
         writeMemory(weaponPtr, &weapon);
     }
