@@ -38,7 +38,7 @@ While more integrated solutions are being found out, there's probably ways to se
 > Some issues will be much easier to fix then others.  
 > The game is fully tested to be completeable, from start to finish.
 > 
-> If you want to help to improve the mod and tackle some of these issues, reach out in the development channel on the development channel in the Flat2VR Discord for extra info, context and requirements!
+> If you want to help to improve the mod and tackle some of these issues, reach out in the ZBW Development Channel in the [Flat2VR Discord](https://discord.com/invite/flat2vr) for extra info, context and requirements!
 >
 > **Critical Issues:**
 > * Climbing ladders requires looking away with the camera using your controller stick.
@@ -117,7 +117,7 @@ Additionally, since combat is a large part of the original game, there's also a 
 
 Understanding how the game works, finding and patching the exact parts inside the game's executable is by far the most difficult part and it took thousands of hours of reverse-engineering. Its without a doubt the most time consuming task of this VR mod, especially since this game uses a custom C++ engine of which is not much known about other then the good work of the (largely unfinished, but still very helpful) decompilation project.
 
-If you want to know more about the technical details, feel free to ask in the VR modding discord linked below.
+If you want to know more about the technical details, feel free to ask in the BetterVR related channels in the [Flat2VR Discord server](https://discord.com/invite/flat2vr).
 There's enough that was skipped over or left out in this explanation.
 
 
@@ -126,15 +126,17 @@ There's enough that was skipped over or left out in this explanation.
 1. Install the latest Vulkan SDK from https://vulkan.lunarg.com/sdk/home#windows and make sure that VULKAN_SDK was added
    to your environment variables.
 
-2. Install [vcpkg](https://github.com/microsoft/vcpkg) and use the following command to install the required dependencies:
+2. Install [vcpkg](https://github.com/microsoft/vcpkg) (make sure to run the bootstrap and install commands it mentions) and use the following command to install the required dependencies:
    `vcpkg install openxr-loader:x64-windows-static-md glm:x64-windows-static-md vulkan-headers:x64-windows-static-md imgui:x64-windows-static-md`
 
-3. [Optional] Download and extract a new Cemu installation to the Cemu folder that's included.
+3. Change the CMakeUserPresets.json file to contain the directory where you've stored vcpkg. Its currently hardcoded.
+
+4. [Optional] Download and extract a new Cemu installation to the Cemu folder that's included.
    This step is technically not required, but it's the default install location and makes debugging much easier.
 
-4. Use Clion or Visual Studio to open the CMake project. Make sure that it's compiling a x64 build.
+5. Use Clion or Visual Studio to open the CMake project. Make sure that it's compiling a x64 build.
 
-5. If you want to use it outside visual studio, you can go to the `/[cmake-output-folder]/bin/` folder for the BetterVR_Layer.dll.
+6. If you want to use it outside visual studio, you can go to the `/[cmake-output-folder]/bin/` folder for the BetterVR_Layer.dll.
    The `BetterVR_Layer.json` and `Launch_BetterVR.bat` can be found in the [resources](/resources) folder.
    Then you can launch Cemu with the hook using the Launch_BetterVR.bat file to start Cemu with the hook.
 
@@ -143,7 +145,7 @@ There's enough that was skipped over or left out in this explanation.
 Crementif: Main Developer  
 Acudofy: Sword & stab analysis system  
 Holydh: Developed some of the new input systems  
-leoetlino: For the [BotW Decomp project](github.com/zeldaret/botw), which was very useful  
+leoetlino: For the [BotW Decomp project](https://github.com/zeldaret/botw), which was very useful  
 Exzap: Technical support and optimization help  
 Mako Marci: Edited the trailer  
 Tim, Mako Marci, Solarwolf07 & Elliott Tate: Helped with testing, recording, feedback and support  
