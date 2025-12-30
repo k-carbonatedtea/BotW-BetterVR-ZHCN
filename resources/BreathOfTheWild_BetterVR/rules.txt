@@ -1,8 +1,8 @@
 [Definition]
 titleIds = 00050000101C9300,00050000101C9400,00050000101C9500
-name = Better VR
+name = Better VR (更好的 VR)
 path = "The Legend of Zelda: Breath of the Wild/Better VR"
-description = Used to enable and change VR settings for BetterVR.||Made by Crementif.
+description = 用于启用和更改 BetterVR 的 VR 设置。||由 Crementif 制作。
 version = 7
 default = 1
 
@@ -17,199 +17,200 @@ $cameraDistance = 0.5
 $cameraHeight = -0.5
 $enableDebugOverlay:int = 0
 $leftHanded:int = 0
-$buggyAngularVelocity:int = 0 # Whether the angular velocity is wrongly provided in local space. Possible Values: 0 is auto; 1 is forced on; 2 is forced off
+$buggyAngularVelocity:int = 0 # 角速度是否在局部空间中提供了错误的值。可选值：0 为自动；1 为强制开启；2 为强制关闭
 
 $cutsceneCameraMode:int = 1
 $cutsceneBlackBars:int = 1
 
 
-# Camera Mode
+# 摄像机模式
 [Preset]
-name = Third-Person Camera (Most Stable & Casual, Seated Recommended)
-category = Camera Mode
+name = 第三人称视角 (最稳定且休闲，推荐坐姿游玩)
+category = 摄像机模式
 $cameraMode = 0
 
 [Preset]
-name = First-Person Camera (Most Immersive, Standing Recommended)
-category = Camera Mode
+name = 第一人称视角 (最具沉浸感，推荐站姿游玩)
+category = 摄像机模式
 default = 1
 # TODO: use Player->mode_slippingOrTreeClimbing to maybe zoom out when a wall is climbed
+# 待办：当攀爬墙壁时，使用 Player->mode_slippingOrTreeClimbing 可能会拉远镜头
 $cameraMode = 1
 
 
-# Motion & Gamepad Controls
+# 体感与手柄控制
 [Preset]
-name = Use VR Motion Controls & Wii U Gamepad Input (Recommended)
-category = Motion & Gamepad Controls
+name = 使用 VR 体感控制 & Wii U Gamepad 输入 (推荐)
+category = 体感与手柄控制
 condition = $cameraMode == 1
 default = 1
 $allowGamepadInput:int = 1
 
 [Preset]
-name = Only Use VR Controllers (some inputs might require the gamepad)
-category = Motion & Gamepad Controls
+name = 仅使用 VR 控制器 (某些输入可能仍需 Gamepad)
+category = 体感与手柄控制
 condition = $cameraMode == 1
 $allowGamepadInput:int = 0
 
 
-# Left Or Right Handed
+# 左手或右手惯用手
 [Preset]
-name = Left-Handed Weapon (Shield On Right Hand)
-category = Left Or Right Handed (Not Working Yet)
+name = 左手持武器 (盾在右手)
+category = 左右手惯用手 (暂不可用)
 condition = $cameraMode == 1
 $leftHanded:int = 1
 
 [Preset]
-name = Right-Handed Weapon (Default)
-category = Left Or Right Handed (Not Working Yet)
+name = 右手持武器 (默认)
+category = 左右手惯用手 (暂不可用)
 condition = $cameraMode == 1
 default = 1
 $leftHanded:int = 0
 
 
-# Cutscene Settings
+# 过场动画设置
 [Preset]
-name = Watch All Cutscenes From Link's Perspective (For Testing, Not Recommended)
-category = Cutscene Camera Mode
+name = 以林克的第一视角观看所有过场动画 (测试用，不推荐)
+category = 过场动画视角模式
 condition = $cameraMode == 1
 $cutsceneCameraMode:int = 1
 
 [Preset]
-name = Use Optimal Cutscene Settings, Mix Of Both (Recommended)
-category = Cutscene Camera Mode
+name = 使用最佳过场设置，混合模式 (推荐)
+category = 过场动画视角模式
 condition = $cameraMode == 1
 default = 1
 $cutsceneCameraMode:int = 2
 
 [Preset]
-name = Watch All Cutscenes In Third Person Like Original Game (Less Immersive, Most Stable)
-category = Cutscene Camera Mode
+name = 像原版游戏一样以第三人称观看所有过场动画 (沉浸感较低，最稳定)
+category = 过场动画视角模式
 condition = $cameraMode == 1
 $cutsceneCameraMode:int = 3
 
 
-# Cutscene Black Bars
-# This is a user-configurable setting to add black boxes around a third-person cutscene, since those can be disorientating with floating, animated and non-FPS perspectives.
+# 过场动画黑边
+# 这是一个用户可配置的设置，用于在第三人称过场动画周围添加黑框，因为浮动、动画和非第一人称视角可能会导致方向迷失。
 [Preset]
-name = Use Black Bars During Third-Person Cutscenes (Recommended For Comfort)
-category = Cutscene Black Bars
+name = 在第三人称过场动画中使用黑边 (推荐，更舒适)
+category = 过场动画黑边
 $cutsceneBlackBars:int = 1
 
 [Preset]
-name = Use Fullscreen During Third-Person Cutscenes (Recommended For Brave People, Lots Of Movement)
-category = Cutscene Black Bars
+name = 在第三人称过场动画中使用全屏 (推荐给勇敢的人，大幅度运动)
+category = 过场动画黑边
 default = 1
 $cutsceneBlackBars:int = 0
 
 
-# 2D Viewer - Crop VR Image To 16:9
+# 2D 查看器 - 裁剪 VR 图像至 16:9
 [Preset]
-name = Crop 3D Game World To 16:9 (Recommended)
-category = Crop VR Image
+name = 裁剪 3D 游戏画面为 16:9 (推荐)
+category = 裁剪 VR 图像
 condition = $enable2DView == 1
 default = 1
 $cropFlatTo16_9:int = 1
 
 [Preset]
-name = Crop 3D Game World To 4:3
-category = Crop VR Image
+name = 裁剪 3D 游戏画面为 4:3
+category = 裁剪 VR 图像
 condition = $enable2DView == 1
 $cropFlatTo16_9:int = 0
 
 
-# GUI Follow Mode
+# GUI (界面) 跟随模式
 
 [Preset]
-name = HUD & Menus Will Follow Your Head (Default)
-category = GUI Follow Mode
+name = HUD 和菜单跟随头部移动 (默认)
+category = GUI 跟随模式
 default = 1
 $guiFollowMode:int = 1
 
 
 [Preset]
-name = HUD & Menus Stays In Front
-category = GUI Follow Mode
+name = HUD 和菜单固定在前方
+category = GUI 跟随模式
 $guiFollowMode:int = 0
 
 
-# First Person - Height Offset
+# 第一人称 - 高度偏移
 # [Preset]
-# name = Small
-# category = Height In First Person
+# name = 矮
+# category = 第一人称高度
 # condition = $cameraMode == 1
 # $cameraHeight = -1.0
 # 
 # [Preset]
-# name = Normal (Default)
-# category = Height In First Person
+# name = 正常 (默认)
+# category = 第一人称高度
 # condition = $cameraMode == 1
 # default = 1
 # $cameraHeight = -0.5
 # 
 # [Preset]
-# name = Tall (VFX Might Be Offset)
-# category = Height In First Person
+# name = 高 (特效可能会偏移)
+# category = 第一人称高度
 # condition = $cameraMode == 1
 # $cameraHeight = 0.0
 # 
 # [Preset]
-# name = Really Tall (VFX Might Be Offset)
-# category = Height In First Person
+# name = 很高 (特效可能会偏移)
+# category = 第一人称高度
 # condition = $cameraMode == 1
 # $cameraHeight = 10.0
 
 
-# Third Person - Camera Distance
+# 第三人称 - 摄像机距离
 
 [Preset]
-name = Zero
-category = Camera Distance
+name = 零距离
+category = 摄像机距离
 condition = $cameraMode == 0
 $cameraDistance = 0.0
 
 [Preset]
-name = Low
-category = Camera Distance
+name = 低 (近)
+category = 摄像机距离
 condition = $cameraMode == 0
 $cameraDistance = 0.4
 
 [Preset]
-name = Normal (Default)
-category = Camera Distance
+name = 正常 (默认)
+category = 摄像机距离
 condition = $cameraMode == 0
 default = 1
 $cameraDistance = 0.5
 
 [Preset]
-name = High
-category = Camera Distance
+name = 高 (远)
+category = 摄像机距离
 condition = $cameraMode == 0
 $cameraDistance = 0.675
 
 [Preset]
-name = Very High
-category = Camera Distance
+name = 很高 (很远)
+category = 摄像机距离
 condition = $cameraMode == 0
 $cameraDistance = 0.8
 
 [Preset]
-name = Extreme
-category = Camera Distance
+name = 极高 (极远)
+category = 摄像机距离
 condition = $cameraMode == 0
 $cameraDistance = 0.9
 
 
-# Debug Overlay
+# 调试覆盖层
 
 [Preset]
-name = Enabled (Might Cause Performance & Crashing Issues)
-category = Enable VR Debugging Overlay (Experimental)
+name = 启用 (可能导致性能下降和崩溃问题)
+category = 启用 VR 调试覆盖层 (实验性)
 condition = $enable2DView == 1
 $enableDebugOverlay:int = 1
 
 [Preset]
-name = Disabled (Default)
-category = Enable VR Debugging Overlay (Experimental)
+name = 禁用 (默认)
+category = 启用 VR 调试覆盖层 (实验性)
 condition = $enable2DView == 1
 default = 1
 $enableDebugOverlay:int = 0
