@@ -1,4 +1,5 @@
 #include "vkroots.h"
+#include <fstream>
 
 template <>
 struct std::formatter<VkResult> : std::formatter<string> {
@@ -255,6 +256,14 @@ public:
             return;
         }
         std::string messageStr = std::string(message) + "\n";
+        
+#ifndef _DEBUG
+        if (logFile.is_open()) {
+            logFile << messageStr;
+            logFile.flush();
+        }
+#endif
+
         DWORD charsWritten = 0;
         WriteConsoleA(consoleHandle, messageStr.c_str(), (DWORD)messageStr.size(), &charsWritten, NULL);
 #ifdef _DEBUG
@@ -280,6 +289,7 @@ public:
 private:
     static HANDLE consoleHandle;
     static double timeFrequency;
+    static std::ofstream logFile;
 };
 
 static void checkXRResult(const XrResult result, const char* errorMessage) {

@@ -1,14 +1,14 @@
-
 HANDLE Log::consoleHandle = NULL;
 double Log::timeFrequency = 0.0f;
-
-#define _DEBUG
+std::ofstream Log::logFile;
 
 Log::Log() {
-#ifdef _DEBUG
     AllocConsole();
     SetConsoleTitleA("BetterVR Debugging Console");
     consoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+#ifdef _DEBUG
+#else
+    logFile.open("BetterVR.log", std::ios::out | std::ios::trunc);
 #endif
     Log::print<INFO>("Successfully started BetterVR!");
     LARGE_INTEGER timeLI;
@@ -18,8 +18,12 @@ Log::Log() {
 
 Log::~Log() {
     Log::print<INFO>("Shutting down BetterVR debugging console...");
-#ifdef _DEBUG
     FreeConsole();
+#ifdef _DEBUG
+#else
+    if (logFile.is_open()) {
+        logFile.close();
+    }
 #endif
 }
 
